@@ -1,0 +1,53 @@
+解决方案
+
+方法一：
+
+1
+2
+3
+content = strings.Replace(content, "\\u003c", "<", -1)
+content = strings.Replace(content, "\\u003e", ">", -1)
+content = strings.Replace(content, "\\u0026", "&", -1)
+这种方式比较直接，硬性字符串替换。比较憨厚
+
+方法二：
+
+文档中写到This escaping can be disabled using an Encoder that had SetEscapeHTML(false) alled on it.
+
+我们先创建一个buffer用于存储json
+
+创建一个jsonencoder
+
+设置html编码为false
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+type Test struct {
+  Content   string
+}
+func main() {
+  t := new(Test)
+  t.Content = "http://www.baidu.com?id=123&test=1"
+  bf := bytes.NewBuffer([]byte{})
+  jsonEncoder := json.NewEncoder(bf)
+  jsonEncoder.SetEscapeHTML(false)
+  jsonEncoder.Encode(t)
+  fmt.Println(bf.String())
+}
+1
+2
+{"Content":"http://www.baidu.com?id=123&test=1"}
+Process finished with exit code 0
+查看文档和源码还是解决问题的好方法。
+
+ 

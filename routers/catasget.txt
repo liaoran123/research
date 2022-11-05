@@ -1,0 +1,30 @@
+package routers
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+
+	"research/base"
+	"research/gstr"
+	"research/pubgo"
+)
+
+func catasget(w http.ResponseWriter, req *http.Request) {
+
+	pubgo.Tj.Brows(gstr.Mstr(req.URL.Path, "/", "/"))
+
+	params := getparas(req)
+	fid := params["id"]
+	if fid == "" {
+		fid = "0"
+	}
+	ifid, _ := strconv.Atoi(fid)
+	ca := base.Newcata()
+	caids := ca.ChildCatas(ifid)
+
+	cif := base.CataInfos{}
+	cif.Catas = caids
+
+	json.NewEncoder(w).Encode(cif)
+}

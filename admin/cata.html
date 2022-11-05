@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- jquery.min.js一定要在最前面 -->
+    <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
+        integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+        crossorigin="anonymous"></script>
+
+
+    <title>目录管理--考据级搜索引擎系统</title>
+</head>
+
+<body style="font-size: 16px;">
+    <div id="home" style="max-width: 1024px; margin-right: auto; margin-left: auto;">
+        <div class="panel panel-default">
+            <div class="panel-heading text-center" style="font-weight: 600;">
+                <h2>目录管理</h2>                
+            </div>
+            <div class="panel-heading">
+                <a id="fcata" class="label label-primary" href="#">返回上级目录</a>
+                <h2 id="fidname">name</h2>
+                <p id="cataohter">
+                    <a id="addarturl" class="label label-primary" href="#">在该目录下添加文章</a>
+                  <br>
+                    <a id="cataart" class="label label-primary" href="#">查看该目录下文章</a>                   
+                </p>
+
+            </div>
+            <div class="panel-heading">
+                <b>子目录列表</b>
+            </div>
+            <div class="panel-heading" id="catas">
+
+            </div>
+
+            <script>
+                window.onload = function () {
+                    catasinfo()
+                    catainfo()
+                }
+                //获取子目录
+                function catasinfo() {
+                    //获取当前url的id参数，即目录id，赋予$("#fid").val     
+                    var fid = "0"
+                    var para = window.location.href.split("?")//[0].split("=")[1]            
+                    if (para.length > 1) {
+                        fid = para[1].split("=")[1]
+                        fid = fid.split("#")[0]
+                    }
+                    $("#fid").val(fid)
+                    if (fid == 0) {
+                        $("#cataohter").hide()
+                    }
+                    $("#addarturl").attr("href", "/admin/art/?fid=" + fid)
+                    $("#cataart").attr("href", "/api/artitem/?id=" + fid+"&count=21")
+
+                    //***********打开目录等于url的id参数的所有子目录**************
+                    $.ajax({
+                        url: "/api/cata/",
+                        dataType: "json",
+                        type: "get",
+                        data: {
+                            fid: fid
+                        },
+                        success: function (result) {
+                            console.log(result)
+                            // $("#fidname").html(result.name) //result.name目录名称
+                            // $("#fcata").attr("href", "/admin/cata/?id=" + result.fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。
+                            var chtml = ""
+                            /*result.Catainfo，子目录信息数组
+                            fid,父id
+                            id，目录id
+                            name，目录名称
+                            */
+                            //组织子目录列表html
+                            if (result == null) {//没有子目录
+                                $("#catas").html("无")
+                                return
+                            }
+                            for (let index = 0; index < result.length; index++) {
+                                const element = result[index];
+                                if (element.title == "") {//title==""，逻辑上删除的目录。目录不会物理删除。
+                                    continue
+                                }
+                                chtml += '<div class="panel-heading"><a href="?id=' + element.id + '"><b>' + element.title + '</b></a> <a href="#insert" data-id="' + element.id + '" data-fid="' + element.fid + '" data-name="' + element.title + '" onclick="tianchong(this)"><span  class="label label-default">填充输入框</span></a></div>'
+                            }
+                            $("#catas").html(chtml)
+
+                        }
+                    });
+                }
+                //打开一目录信息。
+                function catainfo() {
+                    // $("#fid").val(fid)
+                    $.ajax({
+                        url: "/api/cata/",
+                        dataType: "json",
+                        type: "get",
+                        data: {
+                            id: $("#fid").val()
+                        },
+                        success: function (result) {
+                            console.log(result)
+                            $("#fidname").html(result.name) //result.name目录名称
+                            $("#fcata").attr("href", "/admin/cata/?id=" + result.fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。                           
+                        }
+                    });
+                }
+                //--将对应的子目录信息填充入对应的输入框。
+                function tianchong(obj) {
+                    $("#caid").val($(obj).attr("data-id"))
+                    $("#fid").val($(obj).attr("data-fid"))
+                    $("#name").val($(obj).attr("data-name"))
+                }
+            </script>
+
+            <div class="panel-body">
+                <div class="panel-heading">
+                    <h4>添加子目录</h4>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon">目录id</span>
+                    <input id="caid" type="text" class="form-control" readonly="readonly">
+                    <p class="label label-default">用于修改、删除时用。</p>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon">目录名称</span>
+                    <input id="name" type="text" class="form-control" aria-describedby="basic-addon1">
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon">上级目录id</span>
+                    <input id="fid" type="text" class="form-control" value="">
+                    <p class="label label-default">0，表示顶级目录</p>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon">管理员密码</span>
+                    <input id="psw" type="text" class="form-control" aria-describedby="basic-addon1">
+                </div>
+            </div>
+            <div class="panel-body text-center">
+                <div class="btn-group">
+                    <button id="post" type="button" class="btn btn-Primary" aria-haspopup="true" aria-expanded="false">
+                        添加目录
+                    </button>
+                    <script>
+                        $("#post").click(function () {
+                            ititle = $("#name").val().trim()
+                            //ititle = $.trim(ititle)
+                            ifid = $("#fid").val();
+                            ipsw = $("#psw").val();
+                            if (ititle == "") {
+                                alert("请输入标题。")
+                                return
+                            }
+                            if (ipsw == "") {
+                                alert("请输入密码。")
+                                return
+                            }
+                            $.post("/api/cata/",
+                                {
+                                    title: ititle,
+                                    fid: ifid,
+                                    psw: ipsw
+                                },
+                                function (result) {
+                                    console.log(result)
+                                    if (result.Succ == true) {
+                                        alert("添加成功。")
+                                        location.reload();
+                                    }
+                                }, "json");
+                        });
+
+                    </script>
+                </div>
+
+                <div class="btn-group">
+                    <button id="PUT" type="button" class="btn btn-Primary" aria-haspopup="true" aria-expanded="false">
+                        修改目录
+                    </button>
+                    <script>
+                        $("#PUT").click(function () {
+                            id = $("#caid").val()
+                            if (caid == "") {
+                                alert("请先点击要修改的目录右边【填充输入框】，获取目录id")
+                                return
+                            }
+                            fid = $("#fid").val();
+                            psw = $("#psw").val();
+                            name = $("#name").val().trim()
+                            if (name == "") {
+                                alert("请输入标题。")
+                                return
+                            }
+                            if (psw == "") {
+                                alert("请输入密码。")
+                                return
+                            }
+                            $.ajax({
+                                url: "/api/cata/",
+                                dataType: "json",
+                                type: "put",
+                                data: {
+                                    id: id,
+                                    fid: fid,
+                                    name: name,
+                                    psw: psw
+                                },
+                                success: function (result) {
+                                    console.log(result)
+                                    if (result.Succ == true) {
+                                        alert("修改成功。")
+                                        location.reload();
+                                    }
+                                }
+                            });
+                        });
+
+                    </script>
+                </div>
+
+                <div class="btn-group">
+                    <button id="delcata" type="button" class="btn btn-Primary" aria-haspopup="true"
+                        aria-expanded="false">
+                        删除目录
+                    </button>
+                    <script>
+                        $("#delcata").click(function () {                            
+                            id = $("#caid").val()
+                            if (id == "") {
+                                alert("请先点击要修改删除的目录右边【填充输入框】，获取目录id")
+                                return
+                            }
+                            psw = $("#psw").val();
+                            if (psw == "") {
+                                alert("请输入密码。")
+                                return
+                            }
+                            $.ajax({
+                                url: "/api/cata/",
+                                dataType: "json",
+                                type: "DELETE",
+                                data: {
+                                    id: id,
+                                    psw:psw
+                                },
+                                success: function (result) {
+                                    console.log(result)
+                                    if (result.Succ == true) {
+                                        alert("删除成功。")
+                                        location.reload();
+                                    }
+                                }
+                            });
+                        })
+                    </script>
+                </div>
+            </div>
+        </div>
+
+
+
+</body>
+
+</html>

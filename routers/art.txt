@@ -1,0 +1,136 @@
+package routers
+
+import (
+	"fmt"
+	"research/gstr"
+	"research/levelfun"
+	"research/pubgo"
+	"strconv"
+	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb/util"
+)
+
+//搜索系统文章的添加、修改、删除
+/*
+leveldb
+
+ml- 目录表
+k=ml-id;v=文章标题
+---------
+t- 目录索引表
+k=t-长度7的标题遍历分词;v=文章id
+***********************************
+s- 内容表
+s-文章id-分段id；v=分段内容
+--------
+i- 内容索引表
+k=i-长度7的分段内容遍历分词-文章id-分段id;v=空值
+i-最后后面加"文章id-分段id"，为了按id先后排序
+*/
+type art struct {
+	tid int //文章id
+}
+
+func newart(id int) *art {
+	return &art{tid: id}
+}
+
+//添加目录标题
+func (a *art) addml(title string) {
+	err = Fulltext.Db.Put(pubgo.JoinBytes([]byte("ml-"), pubgo.IntToBytes(a.tid)), []byte(title), nil) //添加目录标题
+	chekerr(err)
+}
+
+//添加内容，将文章分成多个句子段落后添加到表
+func (a *art) addtext(text, split string) {
+	itext := text
+	if split != "" {
+		itext = strings.Replace(text, split, split+"\n", -1) //分配段落
+	}
+	section := strings.Split(itext, "\n")
+	for i, sec := range section {
+		Fulltext.Db.Put(pubgo.JoinBytes([]byte("s-"), pubgo.IntToBytes(a.tid), []byte("-"), pubgo.IntToBytes(i)), []byte(strings.TrimSpace(sec)), nil)
+	}
+}
+
+//获取索引库，由于兼容企业版分库，故而稍微麻烦。
+func getdb(c string) *levelfun.Levdb {
+	n := ConfigMap["idxdb"]
+	if n != nil { //是企业版则索引分库
+		return FulltextIdx[int([]rune(c)[0])%n.(int)]
+	} else {
+		return Fulltext
+	}
+}
+
+//添加内容索引
+func (a *art) AddIdx(pfx string) {
+	iter := Fulltext.Db.NewIterator(util.BytesPrefix([]byte(pfx+strconv.Itoa(a.tid))), nil)
+	var key string
+	var nr, knr string //, fid
+	var ml, cl int
+
+	var pk, pv []byte
+	var r, idxstr []rune
+
+	for iter.Next() {
+		key = string(iter.Key())
+
+		nr = string(iter.Value())
+		r = []rune(nr)
+		cl = len([]rune(nr))
+		for cl > 0 {
+			if cl >= kwlen {
+				ml = kwlen
+			} else {
+				ml = cl
+			}
+			idxstr = r[:ml]
+			knr = string(idxstr)
+			pk = pubgo.JoinBytes([]byte("i-"), []byte(knr), []byte("-"), []byte(gstr.RStr(key, "-")))
+			pv = []byte{}
+			tempdb = getdb(nr)
+			err = tempdb.Db.Put(pk, pv, nil)
+			fmt.Println(string(pk), string(pv))
+			chekerr(err)
+			r = r[1:]
+			cl = len(r)
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	chekerr(err)
+}
+
+//添加标题的索引
+func (a *art) AddtitleIdx(nr string) {
+	var knr string //, fid
+	var ml, cl int
+	var r, idxstr []rune
+	var pk, pv []byte
+	r = []rune(nr)
+	cl = len(r)
+	for cl > 0 {
+		if cl >= kwlen {
+			ml = kwlen
+		} else {
+			ml = cl
+		}
+		idxstr = r[:ml]
+		knr = string(idxstr)
+		pk = pubgo.JoinBytes([]byte("t-"), []byte(knr))
+		pv = pubgo.IntToBytes(a.tid) //[]byte(a.tid11)
+		err = Fulltext.Db.Put(pk, pv, nil)
+		fmt.Println(string(pk), string(pv))
+		chekerr(err)
+		r = r[1:]
+		cl = len(r)
+	}
+
+}
+func chekerr(err error) {
+	if err != nil {
+		fmt.Println(err)
+	}
+}

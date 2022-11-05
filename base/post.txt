@@ -1,0 +1,18 @@
+package operator
+
+func post(params map[string]string) interface{} {
+	title := params["title"]
+	text := params["text"]
+	split := params["split"]
+	url := params["url"]
+
+	if title == "" || text == "" {
+		return "标题或内容不能为空"
+	}
+	Art.SetTId()
+	Art.AddCatalog(title, url)
+	//Art.TextSplit(title+"\n"+text, split) //标题加入内容，以便可以在内容也可以搜索到标题
+	Art.AddIdx(Art.TextSplit(title+"\n"+text, split))
+	Art.SetAutoincId()
+	return "提交成功"
+}

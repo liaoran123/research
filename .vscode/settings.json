@@ -1,0 +1,9 @@
+{
+    "files.saveConflictResolution": "askUser",
+    "gitlens.proxy": {
+
+    
+    },
+    "gitlens.codeLens.dateFormat": "",
+    "git.enabled": true
+}

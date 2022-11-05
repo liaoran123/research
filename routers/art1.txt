@@ -1,0 +1,42 @@
+package routers
+
+import (
+	"net/http"
+
+	"strings"
+)
+
+const (
+	StatusOK = 200
+)
+
+var (
+	//mu        sync.RWMutex
+	reqMethod map[string]func(w http.ResponseWriter, req *http.Request)
+)
+
+func Art(w http.ResponseWriter, req *http.Request) {
+	if reqMethod == nil {
+		reqMethod = make(map[string]func(w http.ResponseWriter, req *http.Request), 4)
+		reqMethod["POST"] = post   //添加
+		reqMethod["GET"] = get     //查询
+		reqMethod["PUT"] = post    //修改
+		reqMethod["DELETE"] = post //删除
+	}
+	w.WriteHeader(StatusOK) //状态码
+	if f, ok := reqMethod[req.Method]; ok {
+		f(w, req)
+	}
+}
+
+//用户提交的数据参数转map
+func getpara(reqdata string) map[string]string {
+	params := make(map[string]string)
+	pds := strings.Split(reqdata, "&")
+	var ap []string
+	for _, p := range pds {
+		ap = strings.Split(p, "=")
+		params[ap[0]] = ap[1]
+	}
+	return params
+}

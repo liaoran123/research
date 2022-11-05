@@ -1,0 +1,42 @@
+package routers
+
+import (
+	"research/base"
+	"research/pubgo"
+	"strconv"
+)
+
+func post(params map[string]string) interface{} {
+	title := params["title"]
+	isdir := "0" //默认不是目录，而是文章
+	text := params["text"]
+	if text == "" { //是目录
+		isdir = "1"
+	}
+	fid := params["fid"]
+	if fid == "" {
+		fid = "0" //默认是0，即顶级目录
+	}
+	split := params["split"]
+	url := params["url"]
+	psw := params["psw"]
+	if psw != pubgo.ConfigMap["pws"].(string) { //密码不对
+		return "密码不对"
+	}
+	if title == "" {
+		return "标题不能为空"
+	}
+
+	ifid, _ := strconv.Atoi(fid)
+	if base.Art == nil {
+		base.Art = base.NewArticle()
+	}
+	r := base.Art.Insert(title, text, url, split, isdir, ifid)
+	Rmsg := NewRmsg()
+	if r {
+		Rmsg.Msg = "提交成功"
+		Rmsg.Succ = true
+	}
+	//fmt.Println(Rmsg)
+	return Rmsg
+}

@@ -1,0 +1,138 @@
+package routers
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	
+	"research/gstr"
+	"research/pubgo"
+
+	"strings"
+	"sync"
+)
+
+var mu sync.RWMutex
+
+const (
+	StatusOK = 200
+)
+
+var (
+	
+	mulock       map[string]func()                              //leveldb只支持单线程写操作。除了 "GET" 都要加锁
+	getdatafun   map[string]func(req *http.Request) string      //获取get，post等用户提交的数据
+	operationfun map[string]func(map[string]string) interface{} //查询添加修改删除操作处理。
+	pass         map[string]func(params map[string]string) bool //密码验证.修改删除操作需要
+	rvalue       map[string]func(v interface{})                 //类型转换
+)
+
+func Art(w http.ResponseWriter, req *http.Request) {
+	if mulock == nil { //除get外要加锁。
+		mulock = make(map[string]func(), 3)
+		mulock["POST"] = lock
+		mulock["DELETE"] = lock
+		mulock["PUT"] = lock
+	}
+	if f, ok := mulock[req.Method]; ok {
+		f()
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*") //同源策略，不加客户端调用不了。
+	w.Header().Set("Content-Type", "application/json")
+	ts := pubgo.Newts() //计算执行时间
+	//统计
+	Path := gstr.Mstr(req.URL.Path, "/", "/")
+	pubgo.Tj.Brows(Path)
+
+	if getdatafun == nil {
+		getdatafun = make(map[string]func(req *http.Request) string, 4)
+		getdatafun["POST"] = getPostData   //添加
+		getdatafun["GET"] = getGettData    //查询
+		getdatafun["DELETE"] = getPostData //删除
+		getdatafun["PUT"] = getPostData    //修改
+	}
+
+	var pdata string
+	//获取pos数据
+	if f, ok := getdatafun[req.Method]; ok {
+		pdata = f(req)
+	}
+	if pdata == "" {
+		fmt.Println("没有参数")
+		return
+	}
+	params := getpara(pdata)
+
+	if pass == nil {
+		pass = make(map[string]func(params map[string]string) bool, 3)
+		pass["POST"] = pswpass
+		pass["DELETE"] = pswpass
+		pass["PUT"] = pswpass
+	}
+	if f, ok := pass[req.Method]; ok {
+		if !f(params) {
+			fmt.Println("密码不对")
+			return
+		}
+	}
+	//req.Method
+	if operationfun == nil {
+		operationfun = make(map[string]func(map[string]string) interface{}, 4)
+		operationfun["POST"] = post   //添加
+		operationfun["GET"] = get     //查询
+		operationfun["DELETE"] = post //删除
+		operationfun["PUT"] = post    //修改
+	}
+	var rif interface{}
+	if f, ok := operationfun[req.Method]; ok {
+		rif = f(params)
+	}
+	
+	json.NewEncoder(w).Encode(rif)
+	ys := ts.Gstrts()
+	fmt.Println(rif, ys)
+	w.WriteHeader(StatusOK) //状态码
+}
+
+//获取post的数据
+func getPostData(req *http.Request) string {
+	defer req.Body.Close()
+	con, _ := ioutil.ReadAll(req.Body)
+	pdata, _ := url.QueryUnescape(string(con))
+	return pdata
+}
+
+//获取get的数据
+func getGettData(req *http.Request) string {
+	pas := strings.Split(req.RequestURI, "?")[1]
+	pdata, _ := url.QueryUnescape(string(pas))
+	return pdata
+}
+
+//用户提交的数据参数转map
+func getpara(reqdata string) map[string]string {
+	params := make(map[string]string)
+	pds := strings.Split(reqdata, "&")
+	var ap []string
+	for _, p := range pds {
+		ap = strings.Split(p, "=")
+		params[ap[0]] = ap[1]
+	}
+	return params
+}
+func lock() {
+	mu.Lock() //leveldb只支持单线程写操作。
+	defer mu.Unlock()
+}
+func pswpass(params map[string]string) bool {
+	psw := params["psw"]
+	if psw != pubgo.ConfigMap["pws"].(string) {
+		fmt.Println("密码不对")
+		return false
+	}
+	return true
+}
+

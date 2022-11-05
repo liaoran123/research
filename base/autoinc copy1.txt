@@ -1,0 +1,53 @@
+package base
+
+import "sync"
+
+//自动增值
+type Autoinc struct {
+	tbn string
+	id  int
+	//ld  *Levdb //文章数据库
+	mu sync.RWMutex
+}
+
+func NewAutoinc(tbn string) *Autoinc {
+
+	sid := Con.Getartdb().Getbyte(tbn + "lastid")
+	id := BytesToInt(sid)
+	if id == 0 {
+		id = 1 //id从1开始。当fid=0，则能表示为顶级目录，即没有父id
+	}
+	return &Autoinc{
+		id: id,
+		//ld:  Con.Getartdb(),
+		tbn: tbn,
+	}
+}
+
+func (a *Autoinc) Getid() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	id := a.id
+	a.id++
+	return id
+}
+
+//将自动增值最后id写入数据库表
+func (a *Autoinc) Writelastid() (r bool) {
+	a.mu.Lock()
+	err = Con.Getartdb().Db.Put([]byte(a.tbn+"lastid"), IntToBytes(a.id), nil)
+	a.mu.Unlock()
+	Chekerr()
+	r = err == nil
+	return
+}
+
+/*
+func (a *Autoinc) Setid(id int) {
+	a.id = id
+}
+//+1
+func (a *Autoinc) Inc() {
+	a.id++
+}
+*/

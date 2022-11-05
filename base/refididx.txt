@@ -1,0 +1,60 @@
+package base
+
+import "strings"
+
+//这个表数据将全部加载进内存，以做目录区间搜索判断用。
+//可以快速根据文章id找到其目录id。即fid
+var ReFid map[int]int
+
+//fid-artid反排索引，多个artid对一个fid
+//这个表数据将全部加载进内存，以做目录区间搜索判断用。
+type Refididx struct {
+	tbn string
+}
+
+func NewRefididx() *Refididx {
+	return &Refididx{
+		tbn: "af",
+	}
+}
+
+//fid反向索引，通过artid找到fid
+func (f *Refididx) Insert(artid, fid int) (r bool) {
+	//fid为0的时候，即是不需要目录区间查询功能，则不需要添加
+	//ReFid[artid]不存在的返回值就是0。故不需要添加，同时减少ReFid加载的数据量。
+	if fid == 0 {
+		r = true
+		return
+	}
+	err = Con.Getartdb().Db.Put(f.setkey(artid, fid), []byte{}, nil)
+	Chekerr()
+	r = err == nil
+	if r { //添加到内存
+		ReFid[artid] = fid
+	}
+	return
+}
+func (f *Refididx) Delete(artid, fid int) (r bool) {
+	err = Con.Getartdb().Db.Delete(f.setkey(artid, fid), nil)
+	Chekerr()
+	r = err == nil
+	return
+}
+
+//key=fa-artid-fid
+func (f *Refididx) setkey(artid, fid int) (r []byte) {
+	r = JoinBytes([]byte(f.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(fid))
+	return
+}
+func (f *Refididx) tomap(k, v []byte) {
+	ks := strings.Split(string(k), "-")
+	artid := BytesToInt([]byte(ks[1]))
+	fid := BytesToInt([]byte(ks[2]))
+	ReFid[artid] = fid
+}
+
+//这个表数据将全部加载进内存，以做目录区间搜索判断用。
+func (f *Refididx) LoadMap() {
+	ReFid = make(map[int]int)
+	Con.Getartdb().FindPrefixFun(f.tbn+"-", f.tomap)
+}

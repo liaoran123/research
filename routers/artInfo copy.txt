@@ -1,0 +1,24 @@
+package routers
+
+import (
+	"encoding/json"
+	"net/http"
+	"research/base"
+	"research/pubgo"
+	"strconv"
+)
+
+func ArtInfo(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*") //同源策略，不加客户端调用不了。
+	w.Header().Set("Content-Type", "application/json")
+
+	pubgo.Tj.Brows("ArtInfo")
+
+	params := getparas(req)
+
+	id := params["id"]
+	iid, _ := strconv.Atoi(id)
+	r := base.Pcontent.GetArtinfo(iid)
+	json.NewEncoder(w).Encode(r)
+
+}

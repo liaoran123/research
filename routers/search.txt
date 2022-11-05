@@ -1,0 +1,66 @@
+package routers
+
+import (
+	"encoding/json"
+	"net/http"
+	"research/apis"
+	"research/gstr"
+	"research/pubgo"
+)
+
+func Search(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*") //同源策略，不加客户端调用不了。
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-control", "max-age=600")
+	ts := pubgo.Newts() //计算执行时间
+	//统计
+	Path := gstr.Mstr(req.URL.Path, "/", "/")
+	pubgo.Tj.Brows(Path)
+	/*
+		if req.Method!="GET"{
+			return
+		}
+	*/
+	Q := req.URL.Query()
+	kw := Q.Get("kw")
+	kw = pubgo.Sublen(kw, 35)
+	p := Q.Get("p")
+	f := Q.Get("f")
+	if f == "" {
+		f = "0"
+	}
+	api := apis.NewMysearcher(apis.Dbmap[Path], kw, p, f == "1")
+	api.SetKws()
+	api.SetKwsCp()
+	var r []*apis.Result
+	var Lastkey string
+	if p == "0" {
+		r, Lastkey = api.Search()
+	} else {
+		r, Lastkey = api.SearchNext()
+	}
+
+	rlts := apis.NewResulttexts(f == "1")
+	rlts.Findtext(r) //根据搜索结果的tid组织相关数据
+	api.SetKwsF()
+	w.WriteHeader(http.StatusOK)
+
+	//jsonstr, _ := json.Marshal(api.Kwcp)
+	//json.NewEncoder(w).Encode(rlts.Rt)
+	jt := jsontext{}
+	jt.Kw = kw
+	jt.Stime = ts.Gstrts()
+	jt.Cp = api.Kwcp
+	jt.Lastkey = Lastkey
+	jt.Rt = rlts.Rt
+	json.NewEncoder(w).Encode(jt)
+}
+
+//词与词频
+type jsontext struct {
+	Kw      string             `json:"kw"`
+	Stime   string             `json:"Stime"`
+	Cp      []*apis.Kwscp      `json:"Kwscp"` //词频
+	Lastkey string             `json:"lastkey"`
+	Rt      []*apis.Resulttext `json:"Resulttext"`
+}

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- jquery.min.js一定要在最前面 -->
+    <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
+        integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+        crossorigin="anonymous"></script>
+
+
+    <title>文章管理--考据级搜索引擎系统</title>
+</head>
+
+<body style="font-size: 16px;">
+    <div id="home" style="max-width: 1024px; margin-right: auto; margin-left: auto;">
+        <div class="panel panel-default">
+            <div class="panel-heading text-center" style="font-weight: 600;">
+                <h2>文章管理</h2>
+            </div>
+            <div class="panel-body">
+                <div class="input-group">
+                    <span class="input-group-addon">文章id</span>
+                    <input id="artid" type="text" class="form-control" aria-describedby="basic-addon1">
+                    <p class="label label-default">用于修改、删除时用。</p>
+                    <p class="label label-default">添加文章不用填写，系统自动递增分配id。</p>
+                    <a class="input-group-addon" href="#" onclick="getartinfo()">
+                        <span class="label label-primary" style="font-size: 16px;">获取文章信息</span></a>
+                </div>
+                <script>
+                    window.onload = function () {
+                        var id = ""
+                        var para = window.location.href.split("?")//[0].split("=")[1]            
+                        if (para.length > 1) {
+                            para=para[1].split("=")                            
+                            id = para[1]
+                            id = id.split("#")[0]
+                        }
+                        if (para[0]=="id"){ //url参数传入的是id
+                            $("#artid").val(id)
+                            getartinfo()
+                        }
+                        if (para[0]=="fid"){//url参数传入的是fid
+                            $("#fid").val(id)
+                        }                                           
+                    }
+                    function getartinfo(){                        
+                        $.ajax({
+                        url: "/api/art/",
+                        dataType: "json",
+                        type: "get",
+                        data: {
+                            id: $("#artid").val()
+                        },
+                        success: function (result) {
+                            console.log(result)
+                            $("#title").val(result.title)
+                            $("#text").val(result.text)
+                            $("#split").val(result.split)
+                            $("#fid").val(result.fid)
+                            $("#url").val(result.url)
+                           }
+                    });
+                    }
+                </script>
+                <div class="input-group">
+                    <span class="input-group-addon">标题</span>
+                    <input id="title" type="text" class="form-control" aria-describedby="basic-addon1">
+                </div>
+
+                <div class="input-group">
+                    <span class="input-group-addon">内容</span>
+                    <textarea id="text" class="form-control" name="sign" rows="21" placeholder=""></textarea>
+
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon">分隔符</span>
+                    <input id="split" type="text" class="form-control" aria-describedby="basic-addon1" value="。">
+                    <p class="label label-default">多个用“|”间隔，如：“ 。|&lt;br&gt;|&lt;/p&gt;&lt;/tr&gt; ”。</p>
+                    <p class="label label-default">如果不填系统默认按分行符\n分隔。中文一般以“。”分隔，就是以每个句子为搜索精度。</p>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon">网址/地址</span>
+                    <input id="url" type="text" class="form-control" aria-describedby="basic-addon1">
+                    <p class="label label-default">网址或本地文件地址。不能带"&"，需要自行转义。</p>
+
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon">所属目录id</span>
+                    <input id="fid" type="text" class="form-control" aria-describedby="basic-addon1" value="">                   
+                </div>
+                
+                <div class="input-group">
+                    <span class="input-group-addon">管理员密码</span>
+                    <input id="psw" type="text" class="form-control" aria-describedby="basic-addon1">
+                </div>
+            </div>
+            <div class="panel-body text-center">
+                <div class="btn-group">
+                    <button id="addart" type="button" class="btn btn-Primary" aria-haspopup="true"
+                        aria-expanded="false">
+                        添加文章
+                    </button>
+                </div>
+                <script>
+                    $("#addart").click(function () {
+                        ititle = $("#title").val();
+                        itext = $("#text").val();
+                        isplit = $("#split").val();
+                        if (itext == "" || itext == "") {
+                            alert("标题和内容不能为空。")
+                            return
+                        }
+                        iurl = $("#url").val();
+                        ifid = $("#fid").val().trim();
+                        if (ifid == "") {
+                            ifid = "0"
+                        }
+                        ipsw = $("#psw").val();
+                        $.post("/api/art/",
+                            {
+                                title: ititle,
+                                text: itext,
+                                url: iurl,
+                                split: isplit,
+                                fid: ifid,
+                                psw: ipsw
+                            },
+                            function (result) {
+                                console.log(result)
+                                if (result.Succ == true) {
+                                    alert("添加成功。")
+                                    //location.reload();
+                                }
+                            }, "json");
+                    });
+
+                </script>
+                <div class="btn-group">
+                    <button id="putart" type="button" class="btn btn-Primary" aria-haspopup="true"
+                        aria-expanded="false">
+                        修改文章
+                    </button>
+                    <script>
+                        $("#putart").click(function () {                            
+                            id = $("#artid").val()
+                            if (id == "") {
+                                alert("请输入文章的id")
+                                return
+                            }
+                            psw = $("#psw").val();
+                            if (psw == "") {
+                                alert("请输入密码。")
+                                return
+                            }
+                            title = $("#title").val();
+                            text = $("#text").val();                            
+                            if (text == "" || text == "") {
+                                alert("标题和内容不能为空。")
+                                return
+                            }
+                            split = $("#split").val();
+                            url = $("#url").val();
+                            fid = $("#fid").val().trim();
+                            if (fid == "") {
+                                fid = "0"
+                            }                            
+                            $.ajax({
+                                url: "/api/art/",
+                                dataType: "json",
+                                type: "PUT",
+                                data: {
+                                    id: id,
+                                    psw: psw,
+                                    title:title,
+                                    text:text,
+                                    split:split,
+                                    url:url,
+                                    fid:fid
+                                },
+                                success: function (result) {
+                                    console.log(result)
+                                    if (result.Succ == true) {
+                                        alert("修改成功。")
+                                        location.reload();
+                                    }
+                                }
+                            });
+                        })
+                    </script>
+                </div>
+
+                <div class="btn-group">
+                    <button id="delart" type="button" class="btn btn-Primary" aria-haspopup="true"
+                        aria-expanded="false">
+                        删除文章
+                    </button>
+                    <script>
+                        $("#delart").click(function () {
+                            id = $("#artid").val()
+                            if (id == "") {
+                                alert("请输入文章的id")
+                                return
+                            }
+                            psw = $("#psw").val();
+                            if (psw == "") {
+                                alert("请输入密码。")
+                                return
+                            }
+                            $.ajax({
+                                url: "/api/art/",
+                                dataType: "json",
+                                type: "DELETE",
+                                data: {
+                                    id: id,
+                                    psw: psw
+                                },
+                                success: function (result) {
+                                    console.log(result)
+                                    if (result.Succ == true) {
+                                        alert("删除成功。")
+                                        location.reload();
+                                    }
+                                }
+                            });
+                        })
+                    </script>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,104 @@
+package base
+
+import (
+	"fmt"
+	"research/gstr"
+	"research/pubgo"
+	"strconv"
+	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb/util"
+)
+
+type content struct {
+	Con *Connect
+}
+
+func Newcontent(con *Connect) *content {
+	return &content{Con: con}
+}
+
+//添加内容，将文章分成多个句子段落后添加到表
+func (c *content) TextSplit(text, split string) (section []string) {
+	itext := text //title+"\n"+text
+	if split != "" {
+		//支持多个分段匹配标签。中文常见是“。”.
+		//空格是组合查询，由于支持英文，故而空格不作默认分隔符
+		ss := strings.Split(split, ",")
+		for _, v := range ss {
+			itext = strings.Replace(itext, v, v+"\n", -1) //分配段落
+		}
+	}
+	section = strings.Split(itext, "\n")
+	return
+}
+
+//添加内容索引.pfx=表名；id，文章的id
+func (c *content) AddIdx(pfx string, id int) {
+	iter := c.Con.Getartdb().Db.NewIterator(util.BytesPrefix([]byte(pfx+strconv.Itoa(id))), nil)
+	var key string
+	var disparte []string
+	var pk, pv []byte
+	for iter.Next() {
+		key = string(iter.Key())
+		disparte = c.ForDisparte(string(iter.Value()))
+		for _, dv := range disparte {
+			pk = pubgo.JoinBytes([]byte("i-"), []byte(dv), []byte("-"), []byte(gstr.RStr(key, "-")))
+			//pk = pubgo.JoinBytes([]byte("i-"), []byte(dv), []byte("-"), pubgo.IntToBytes(a.Tid), []byte("-"), pubgo.IntToBytes(i))
+			pv = []byte{}
+			err = c.Con.Getidxdb(dv).Db.Put(pk, pv, nil)
+			fmt.Println(string(pk), string(pv))
+			chekerr()
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	chekerr()
+}
+
+//添加内容，将文章分成多个句子段落后添加到表
+func (c *content) Add(text, split string, id int) {
+	itext := text //title+"\n"+text
+	if split != "" {
+		//支持多个分段匹配标签。中文常见是“。”.
+		//空格是组合查询，由于支持英文，故而空格不作默认分隔符
+		ss := strings.Split(split, ",")
+		for _, v := range ss {
+			itext = strings.Replace(itext, v, v+"\n", -1) //分配段落
+		}
+	}
+	section := strings.Split(itext, "\n")
+	i := 0
+	s := ""
+	for _, sec := range section {
+		s = strings.TrimSpace(sec)
+		if s == "" {
+			continue
+		}
+		err = c.Con.Getartdb().Db.Put(pubgo.JoinBytes([]byte("s-"), pubgo.IntToBytes(id), []byte("-"), pubgo.IntToBytes(i)), []byte(s), nil)
+		i++
+		chekerr()
+	}
+}
+
+//遍历分词
+func (c *content) ForDisparte(nr string, keywordlen int) (disparte []string) {
+	var knr string //, fid
+	var ml, cl int
+	var r, idxstr []rune
+	r = []rune(nr)
+	cl = len([]rune(nr))
+	for cl > 0 {
+		if cl >= keywordlen { //keywordlen索引最大长度
+			ml = keywordlen
+		} else {
+			ml = cl
+		}
+		idxstr = r[:ml]
+		knr = string(idxstr)
+		disparte = append(disparte, knr)
+		r = r[1:]
+		cl = len(r)
+	}
+	return
+}

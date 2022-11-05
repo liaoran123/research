@@ -1,0 +1,37 @@
+package routers
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+
+	"research/base"
+	"research/gstr"
+	"research/pubgo"
+)
+
+func cataput(w http.ResponseWriter, req *http.Request) {
+	pubgo.Tj.Brows(gstr.Mstr(req.URL.Path, "/", "/"))
+	params := getparas(req)
+	id := params["id"]
+	fid := params["fid"]
+	/*
+		if fid == "" {
+			fid = "0"
+		}*/
+
+	ca := base.Newcata()
+	if id != "" { //返回一目录信息
+		iid, _ := strconv.Atoi(id)
+		inf := ca.GetCata(iid)
+		json.NewEncoder(w).Encode(inf)
+		return
+	}
+	//返回所有子目录信息
+	if fid != "" {
+		ifid, _ := strconv.Atoi(fid)
+		inf := ca.ChildCatas(ifid)
+		json.NewEncoder(w).Encode(inf)
+	}
+
+}

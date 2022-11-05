@@ -1,0 +1,42 @@
+package routers
+
+import (
+	"encoding/json"
+	"net/http"
+	"research/gstr"
+	"research/pubgo"
+	"strconv"
+	"strings"
+)
+
+func Juzi(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*") //同源策略，不加客户端调用不了。
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-control", "max-age=600")
+	w.WriteHeader(http.StatusOK)
+	//统计
+	pubgo.Tj.Brows(gstr.Mstr(req.URL.Path, "/", "/"))
+
+	tid := req.URL.Query().Get("id")
+	_, err := strconv.Atoi(tid)
+	if err != nil {
+		return
+	}
+	f := req.URL.Query().Get("f")
+	if f == "" {
+		f = "0"
+	}
+	nr := "apis.Dbdzj.Getjuzi(tid)"
+	nr = strings.Replace(nr, "br", "<br>", -1)
+	nr = strings.Replace(nr, "p0", "", -1)
+	nr = strings.Replace(nr, "p1", "", -1)
+	nr = strings.Replace(nr, "br", "", -1)
+	nr = strings.Replace(nr, "zh1", " ", -1)
+	nr = strings.Replace(nr, "<>", " ", -1)
+
+	json.NewEncoder(w).Encode(djuzi{Juzi: nr})
+}
+
+type djuzi struct {
+	Juzi string `json:juzi`
+}

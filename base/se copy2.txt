@@ -1,0 +1,122 @@
+package base
+
+import (
+	"research/pubgo"
+	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+)
+
+var (
+	fixed map[bool]func(iter iterator.Iterator) bool //起始位置。升序，first；降序，last
+	move  map[bool]func(iter iterator.Iterator) bool //遍历顺序动作。升序，next；降序，prev
+)
+
+//搜索结构体
+type Se struct {
+	//Con   *Connect
+	idx *idx
+	//iter iterator.Iterator
+	//fixed map[bool]func(iter iterator.Iterator) bool //起始位置。升序，first；降序，last
+	//move  map[bool]func(iter iterator.Iterator) bool //遍历顺序动作。升序，next；降序，prev
+	//order bool //排序方式
+}
+
+func NewSe(order bool) *Se {
+	if fixed == nil {
+		fixed = make(map[bool]func(iter iterator.Iterator) bool, 2)
+		fixed[true] = first
+		fixed[false] = last
+	}
+	if move == nil {
+		move = make(map[bool]func(iter iterator.Iterator) bool, 2)
+		move[true] = next
+		move[false] = prev
+	}
+	return &Se{
+		//Con:   con,
+		idx: Newidx(),
+		//fixed: fixed,
+		//move:  move,
+		//order: order,
+	}
+}
+
+//用于第一次搜索时初始化开始key
+func (s *Se) getfirst(pfx string) (inikey string) {
+	iter := s.idx.Getiter(pfx) //Con.Getidxdb(pfx).Db.NewIterator(util.BytesPrefix([]byte(pfx)), nil)
+	if fixed[s.order](iter) {
+		inikey = string(iter.Key())
+	}
+	return
+}
+
+//搜索
+func (s *Se) Search(keyword, p, rand string, order bool, count int) (ids []Ids, lastkey string) {
+	ks := strings.Split(keyword, " ")
+	if len(strings.Split(p, "-")) == 1 { //p不是页码，而是页码的起始key
+		p = s.getfirst(ks[0]) //第一次搜索没有初始定位key，需要获取
+	}
+	iter := s.idx.Getniliter(ks[0]) // Con.Getidxdb(ks[0]).Db.NewIterator(nil, nil)
+	ok := iter.Seek([]byte(p))
+	if !ok {
+		return
+	}
+	ok = fixed[s.order](iter)
+	succ := 0
+	var e bool
+	var key string
+	var artid, secid int
+	var find, eof bool
+	for ok {
+		e = true
+		key = string(iter.Key())
+		if !strings.Contains(key, ks[0]) { //不在范围内。
+			return
+		}
+		artid, secid = getids(key)
+		find = s.exsit(artid, secid, ks)
+		if eof { //遍历完数据都没有找到。
+			lastkey = ""
+			return
+		}
+		e = e && find //组合查询
+		if !e {
+			continue
+		}
+		ids = append(ids, newIds(artid, secid))
+		succ++
+		if succ >= count {
+			lastkey = key
+			break
+		}
+		move[s.order](iter)
+	}
+	iter.Release()
+	iter.Error()
+
+	lastkey = key
+	return
+}
+
+func (s *Se) exsit(iartid, isecid int, ks []string) (find bool) {
+	return
+}
+
+//提取文章，段落id
+func getids(key string) (artid, secid int) {
+	para := strings.Split(key, "-")
+	artid = pubgo.BytesToInt([]byte(para[2])) //文章id
+	secid = pubgo.BytesToInt([]byte(para[3])) //段落id
+	return
+}
+
+/*
+func (a *Article) getfirst(pfx string, order bool) (find string) {
+	iter := a.Con.Getidxdb(pfx).Db.NewIterator(util.BytesPrefix([]byte(pfx)), nil)
+	if fixed[order](iter) {
+		find = string(iter.Key())
+	}
+	return
+}
+*/

@@ -1,0 +1,140 @@
+package operator
+
+import (
+	"fmt"
+
+	"research/pubgo"
+	"strings"
+)
+
+//搜索系统文章的添加、修改、删除
+/*
+leveldb
+
+ml- 目录表
+.k=ml-tid;v=文章标题-url
+***********************************
+s- 内容表
+s-文章id-分段id；v=分段内容
+."文章id-分段id",组成唯一id
+--------
+i- 内容索引表
+.k=i-长度7的分段内容遍历分词-文章id-分段id;v=空值
+.i-最后后面加内容表的唯一id："文章id-分段id"，为了相同分词之后按内容表先后排序一致
+*/
+type Article struct {
+	Tid        int //文章id，仅添加时用到
+	keywordlen int //索引长度
+	Con        *Connect
+	Ainc       *Autoinc
+	//mu         sync.RWMutex
+	succ bool //记录事务流程的成功状态。
+}
+
+//
+func NewArticle(keywordlen, count int) *Article {
+	return &Article{
+		//Tid: id,                //文章id
+		Con: NewConnect(count), //count分库个数
+	}
+}
+
+//获取下一个自动增值的id
+func (a *Article) GetAutoincId() {
+	bid := Art.Con.Fulltext.Getbyte("artlastid")
+	if string(bid) == "" {
+		bid = []byte("1") //默认起始值必须是1.当fid=0时，表示没有fid，则不需要进行fid索引。
+	}
+	a.Ainc.Id = pubgo.BytesToInt(bid)
+}
+
+//设置记录下一个自动增值的id
+//leveldb是单线程写数据，故SetAutoincId需要在最后执行，以能保证事务完整性
+func (a *Article) SetAutoincId(id int) {
+	if !a.succ { //保证数据库完整性的事务处理
+		return //支持简单的回滚。
+	}
+	a.Ainc.Inc()
+	err = a.Con.Fulltext.Db.Put([]byte("artlastid"), pubgo.IntToBytes(a.Ainc.Id), nil)
+	a.chekerr()
+}
+
+////将当前的自增值id赋给当前要添加的对象。
+func (a *Article) SetTId() {
+	//a.mu.Lock()
+	a.Tid = a.Ainc.Id
+	//a.Ainc.Inc()      //递增
+	//a.SetAutoincId(a.Ainc.Id) //写入记录
+	//a.mu.Unlock()
+}
+
+//添加目录标题，url，网址或文件地址
+func (a *Article) AddCatalog(title, url string) {
+	err = a.Con.Fulltext.Db.Put(pubgo.JoinBytes([]byte("ml-"), pubgo.IntToBytes(a.Tid)), []byte(title+"-"+url), nil) //添加目录标题
+	a.chekerr()
+}
+
+//添加内容，将文章分成多个句子段落后添加到表
+func (a *Article) TextSplit(text, split string) (section []string) {
+	itext := text //title+"\n"+text
+	if split != "" {
+		//支持多个分段匹配标签。中文常见是“。”.
+		//空格是组合查询，由于支持英文，故而空格不作默认分隔符
+		ss := strings.Split(split, ",")
+		for _, v := range ss {
+			itext = strings.Replace(itext, v, v+"\n", -1) //分配段落
+		}
+	}
+	section = strings.Split(itext, "\n")
+	return
+}
+
+//添加内容索引.pfx=表名
+func (a *Article) AddIdx(section []string) {
+	var pk, pv []byte
+	var disparte []string
+	i := 0
+	for _, sv := range section {
+		if strings.TrimSpace(sv) == "" {
+			continue
+		}
+		disparte = a.ForDisparte(sv)
+		for _, dv := range disparte {
+			pk = pubgo.JoinBytes([]byte("i-"), []byte(dv), []byte("-"), pubgo.IntToBytes(a.Tid), []byte("-"), pubgo.IntToBytes(i))
+			pv = []byte{}
+			err = a.Con.Getdb(dv).Db.Put(pk, pv, nil)
+			fmt.Println(string(pk), string(pv))
+			a.chekerr()
+		}
+		i++
+	}
+}
+
+//遍历分词
+func (a *Article) ForDisparte(nr string) (disparte []string) {
+	var knr string //, fid
+	var ml, cl int
+	var r, idxstr []rune
+	r = []rune(nr)
+	cl = len([]rune(nr))
+	for cl > 0 {
+		if cl >= a.keywordlen {
+			ml = a.keywordlen
+		} else {
+			ml = cl
+		}
+		idxstr = r[:ml]
+		knr = string(idxstr)
+		disparte = append(disparte, knr)
+		r = r[1:]
+		cl = len(r)
+	}
+	return
+}
+
+func (a *Article) chekerr() {
+	a.succ = a.succ && err == nil //记录事务流程成功状态
+	if !a.succ {
+		fmt.Println(err)
+	}
+}

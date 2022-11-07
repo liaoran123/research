@@ -1,8 +1,5 @@
 #ReSearch--考据级搜索引擎微服务系统<br>  
-<<<<<<< HEAD
 使用技术golang+goleveldb<br> 
-=======
->>>>>>> 8a1fff4751d459d84237b9ad1a204c3ff8645c0c
 
 ##简介<br>  
 ReSearch，从原“乾隆大藏经搜索引擎”和“四库全书搜索引擎”逐渐完善改进而成。<br> 
@@ -41,14 +38,14 @@ ReSearch，可以自定义到段落，句子等等。<br>
 
 ##案例<br> 
 [四库全书搜索引擎](http://www.skqs12.com)
-
-
-
+<br> 
+<br> 
+<br> 
 API接口文档<br> 
-RESTful 风格，返回信息为json格式。<br>添加、修改、删除仅支持单进程操作。<br> 
+RESTful 风格，返回信息为json格式。<br>添加、修改、删除仅支持单进程操作。<br> <br> 
 目录接口<br> 
 包括添加、修改、删除、打开一个目录信息，目录子集信息，目录路径。<br> 
-如果项目仅作搜索中介，该目录则是可选，不一定需要。<br> 
+如果项目仅作搜索中介，该目录则是可选，不一定需要。<br> <br> 
 添加<br> 
 POST /api/cata/?id=&title=&fid&psw=<br> 
 id,可选。<br> 
@@ -57,31 +54,31 @@ id,可选。<br>
 title，目录名称。<br> 
 fid，上级目录的id。<br> 顶级目录fid=0.<br> 
 psw，管理员密码。<br> 
-返回成功信息：{ Msg: "提交成功", Succ: true }<br> 
+返回成功信息：{ Msg: "提交成功", Succ: true }<br> <br> 
 修改<br> 
 PUT /api/cata/?id=&title=&fid&psw=<br> 
 id,修改的目录id。<br> 
 title，目录名称。<br> 
 fid，上级目录的id。<br> 顶级目录fid=0.<br> 
 psw，管理员密码。<br> 
-返回成功信息：{ Msg: "提交成功", Succ: true }<br> 
+返回成功信息：{ Msg: "提交成功", Succ: true }<br> <br> 
 删除<br> 
 DELETE /api/cata/?id=&psw=<br> 
 id,删除的目录id。<br> 
 psw，管理员密码。<br> 
-返回成功信息：{ Msg: "提交成功", Succ: true }<br> 
+返回成功信息：{ Msg: "提交成功", Succ: true }<br><br>  
 打开一个目录信息<br> 
 GET /api/cata/?id=<br> 
 id,目录id。<br> 
 返回信息示例：{ id: 11, fid: 5, title: "佛经" }<br> 
-打开一个目录的所有子目录信息<br> 
+打开一个目录的所有子目录信息<br> <br> 
 GET /api/cata/?fid=<br> 
 fid,目录id。<br> 
-返回信息示例： [ { id: 3, fid: 1, title: "金刚经" }, { id: 4, fid: 1, title: "六祖坛经" } ]<br> 
+返回信息示例： [ { id: 3, fid: 1, title: "金刚经" }, { id: 4, fid: 1, title: "六祖坛经" } ]<br><br>  
 打开目录路径<br> 
 GET /api/cata/?dir=<br> 
 dir,目录id。<br> 
-返回信息示例： [{"id":21,"title":"机缘品"},{"id":4,"title":"六祖坛经"},{"id":1,"title":"佛经"}]<br> 
+返回信息示例： [{"id":21,"title":"机缘品"},{"id":4,"title":"六祖坛经"},{"id":1,"title":"佛经"}]<br><br>  
 打开目录下文章<br> 
 GET /api/artitem/?id=&p=&count=<br> 
 id,目录id。<br> 
@@ -92,9 +89,9 @@ count,每页返回条数。<br> 最大108<br>
 {"ArtItem":[{"id":104,"title":"《实相般若波罗蜜经》"},{"id":3740,"title":"《实相般若波罗蜜经》"}],<br> "p":"105,3740"}<br> 
 "id"，文章id。<br> 
 "title"，文章标题。<br> 
-"p"，定位键值。<br> 
+"p"，定位键值。<br> <br> 
 文章接口<br> 
-包括添加、修改、删除、打开一篇文章信息，文章某段落信息。<br> 
+包括添加、修改、删除、打开一篇文章信息，文章某段落信息。<br> <br> 
 添加<br> 
 POST /api/art/?id=&title=&text=&fid&split=&url=&psw=<br> 
 id，文章id,可选。<br> 
@@ -103,13 +100,13 @@ id，文章id,可选。<br>
 title，文章标题。<br> 
 text，文章内容。<br> 
 split，分隔符。<br> 
-多个用“|”间隔，如：“ 。<br>|<br>|</p></tr> ”。<br> 
+多个用“|”间隔。<br>
 如果不填系统默认按分行符\n分隔。<br> 
 中文一般以“。<br>”分隔，就是以每个句子为搜索精度。<br> 
 fid，上级目录的id。<br>搜索时可以按目录范围搜索。<br> 可选。<br> 
 url， 文章来源url，可选。<br> 
 psw，管理员密码。<br> 
-返回成功信息：{ Msg: "提交成功", Succ: true }<br> 
+返回成功信息：{ Msg: "提交成功", Succ: true }<br> <br> 
 修改<br> 
 PUT /api/art/?id=&title=&text=&fid&split=&url=&psw=<br> 
 id,文章id。<br> 
@@ -121,12 +118,12 @@ split，分隔符。<br>
 url， 可选。<br> 
 fid，上级目录的id。<br>搜索时可以按目录范围搜索。<br> 可选。<br> 
 psw，管理员密码。<br> 
-返回成功信息：{ Msg: "提交成功", Succ: true }<br> 
+返回成功信息：{ Msg: "提交成功", Succ: true }<br> <br> 
 删除<br> 
 DELETE /api/art/?id=&psw=<br> 
 id,文章id。<br> 
 psw，管理员密码。<br> 
-返回成功信息：{ Msg: "提交成功", Succ: true }<br> 
+返回成功信息：{ Msg: "提交成功", Succ: true }<br> <br> 
 打开一个文章信息<br> 
 GET /api/art/?id=<br> 
 id,文章id。<br> 
@@ -135,7 +132,7 @@ id,文章id。<br>
 GET /api/art/?id=&secid=<br> 
 id,文章id。<br> 
 secid,文章分割后的段id。<br>搜索时返回结果即是文章id和段落id。<br> 
-返回信息：该段落的内容。<br> 
+返回信息：该段落的内容。<br> <br> 
 搜索接口<br> 
 /api/search/?kw=&p=&count=&caids=&order=<br> 
 kw,搜索词。<br> 

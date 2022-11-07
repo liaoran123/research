@@ -20,6 +20,7 @@ func catapost(w http.ResponseWriter, req *http.Request) {
 	id := params["id"]
 	title := params["title"]
 	fid := params["fid"]
+	isleaf := params["leaf"]
 	psw := params["psw"]
 	if psw != pubgo.ConfigMap["pws"].(string) { //密码不对
 		Rmsg.Msg = "密码不对"
@@ -35,13 +36,13 @@ func catapost(w http.ResponseWriter, req *http.Request) {
 	ifid, _ := strconv.Atoi(fid)
 	iid, _ := strconv.Atoi(id)
 
-	r := base.Pcata.Insert(iid, title, ifid)
+	r := base.Pcata.Insert(iid, title, isleaf, ifid)
 	//ys := ts.Gstrts()
 	if r {
 		Rmsg.Msg = "提交成功"
 		Rmsg.Succ = true
 		//Rmsg.Time = ys
-	}else{
+	} else {
 		Rmsg.Msg = "提交失败。"
 	}
 	json.NewEncoder(w).Encode(Rmsg)

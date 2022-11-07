@@ -42,10 +42,10 @@ func (c *cata) Setid(id int) {
 }
 
 //添加目录
-func (c *cata) Insert(id int, title string, fid int) (r bool) {
+func (c *cata) Insert(id int, title, isleaf string, fid int) (r bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	r = c.Insertcata(id, title, fid) //经过这里id=c.id
+	r = c.Insertcata(id, title, isleaf, fid) //经过这里id=c.id
 	r = r && c.cfidx.Insert(fid, c.id)
 	//同时需要添加一篇只有目录标题而没有内容的文章，以便通过内容来搜索到目录。
 	r = r && PArticle.Insert(0, title, "", "", "0", id) //文章的fid就是目录的id。Insert(0...，0,表示id是自动增值。
@@ -57,7 +57,7 @@ func (c *cata) Insert(id int, title string, fid int) (r bool) {
 }
 
 //添加目录
-func (c *cata) Insertcata(id int, name string, fid int) (r bool) {
+func (c *cata) Insertcata(id int, name, isleaf string, fid int) (r bool) {
 	if id == 0 { //不传id则自动增值。因为需要批量导入，id由客户决定。
 		c.GetAutotid()
 	} else {
@@ -67,7 +67,7 @@ func (c *cata) Insertcata(id int, name string, fid int) (r bool) {
 	//v=name-fid
 	//setkey
 	//err = Con.Getartdb().Db.Put(JoinBytes([]byte(c.tbn+"-"), IntToBytes(c.id)), JoinBytes([]byte(name+"-"), IntToBytes(fid), []byte("-")), nil) //添加目录标题
-	err = Con.Getartdb().Db.Put(c.setkey(c.id), JoinBytes([]byte(name+"-"), IntToBytes(fid)), nil) //添加目录标题
+	err = Con.Getartdb().Db.Put(c.setkey(c.id), JoinBytes([]byte(name+"-"+isleaf+"-"), IntToBytes(fid)), nil) //添加目录标题
 	Chekerr()
 	r = err == nil
 	return

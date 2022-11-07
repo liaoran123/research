@@ -1,5 +1,8 @@
 #ReSearch--考据级搜索引擎微服务系统<br>  
+<<<<<<< HEAD
 使用技术golang+goleveldb<br> 
+=======
+>>>>>>> 8a1fff4751d459d84237b9ad1a204c3ff8645c0c
 
 ##简介<br>  
 ReSearch，从原“乾隆大藏经搜索引擎”和“四库全书搜索引擎”逐渐完善改进而成。<br> 

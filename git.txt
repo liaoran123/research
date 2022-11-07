@@ -1,3 +1,17 @@
+设置--
+git.enabled
+用户和工作区打钩
+
+点击“提交到git....”--现在填写一个仓库名。
+搞定。
+
+
+
+
+
+
+
+
 git init
 git add README.md
 git commit -m "first commit"

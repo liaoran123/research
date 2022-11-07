@@ -20,7 +20,7 @@ func catapost(w http.ResponseWriter, req *http.Request) {
 	id := params["id"]
 	title := params["title"]
 	fid := params["fid"]
-	isleaf := params["leaf"] //是否叶子目录。叶子目录下即文章。
+	isleaf := params["isleaf"] //是否叶子目录。叶子目录下即文章。
 	psw := params["psw"]
 	if psw != pubgo.ConfigMap["pws"].(string) { //密码不对
 		Rmsg.Msg = "密码不对"

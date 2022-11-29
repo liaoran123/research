@@ -67,7 +67,7 @@ func (c *cata) Insertcata(id int, name, isleaf string, fid int) (r bool) {
 	//v=name-fid
 	//setkey
 	//err = Con.Getartdb().Db.Put(JoinBytes([]byte(c.tbn+"-"), IntToBytes(c.id)), JoinBytes([]byte(name+"-"), IntToBytes(fid), []byte("-")), nil) //添加目录标题
-	err = Con.Getartdb().Db.Put(c.setkey(c.id), JoinBytes([]byte(name+"-"+isleaf+"-"), IntToBytes(fid)), nil) //添加目录标题
+	err = Con.Getartdb().Db.Put(c.setkey(c.id), JoinBytes([]byte(name+"-"), IntToBytes(fid), []byte("-"+isleaf)), nil) //添加目录标题
 	Chekerr()
 	r = err == nil
 	return

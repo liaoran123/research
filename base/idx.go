@@ -6,6 +6,7 @@ i- 内容索引表
 .i-最后后面加内容表的唯一id："文章id-分段id"，为了相同分词之后按内容表先后排序一致
 */
 import (
+	"strconv"
 	"strings"
 
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -42,7 +43,7 @@ func (i *idx) Act(artid, secid, fcataid int, sec string, f func(kw string, k, v 
 		if strings.TrimSpace(dv) == "" {
 			continue
 		}
-		pk = JoinBytes([]byte(i.tbn+"-"), []byte(dv), []byte("-"), IntToBytes(artid), []byte("-"), IntToBytes(secid))
+		pk = JoinBytes([]byte(i.tbn+"~"), []byte(dv), []byte("~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
 		pv = []byte{}
 		if fcataid != 0 {
 			/*
@@ -94,10 +95,10 @@ func (i *idx) ForDisparte(nr string) (disparte []string) {
 //********查询********************
 //获取pfx为前缀的查询索引游标。
 func (i *idx) Getiter(pfx string) iterator.Iterator {
-	return Con.Getidxdb(pfx).Db.NewIterator(util.BytesPrefix([]byte(i.tbn+"-"+pfx)), nil)
+	return Con.Getidxdb(pfx).Db.NewIterator(util.BytesPrefix([]byte(i.tbn+"~"+pfx)), nil)
 }
 
-func (i *idx) GetPfx(pfx string, top int) (r []string) {
+func (i *idx) GetPfx(pfx, caids string, top int) (r []string) {
 	//Con.Getidxdb(pfx).FindPrefixTopFun(pfx, top)
 	if pfx == "" {
 		return
@@ -106,12 +107,17 @@ func (i *idx) GetPfx(pfx string, top int) (r []string) {
 	if max > 21 || max == 0 {
 		max = 21 //最大默认是21
 	}
-	iter := Con.Getidxdb(pfx).Db.NewIterator(util.BytesPrefix([]byte(i.tbn+"-"+pfx)), nil)
+	iter := Con.Getidxdb(pfx).Db.NewIterator(util.BytesPrefix([]byte(i.tbn+"~"+pfx)), nil)
 	loop := 0
 	var ks []string
 	var keys string
+	var icaid int
 	for iter.Next() {
-		ks = strings.Split(string(iter.Key()), "-")
+		ks = strings.Split(string(iter.Key()), "~")
+		icaid = BytesToInt([]byte(ks[2])) //文章id
+		if !rand(icaid, caids) {          //目录范围不对
+			continue
+		}
 		if !strings.Contains(keys, ks[1]+"|") {
 			keys += ks[1] + "|"
 		} else {
@@ -124,5 +130,35 @@ func (i *idx) GetPfx(pfx string, top int) (r []string) {
 	}
 	Release(iter)
 	r = strings.Split(keys, "|")
+	return
+}
+
+//在某个或多个目录下查找
+//caids目录id集合
+func rand(caid int, caids string) (r bool) {
+	if caids == "" || caid == 0 {
+		r = true
+		return
+	}
+	ids := "|" + caids + "|"
+
+	fid := caid //CRAMs.Get(artid - 1).fid //CRAMs.cataRAM[artid-1].fid
+	loop := 0
+	for fid > 0 { //遍历到顶级目录
+		if strings.Contains(ids, "|"+strconv.Itoa(fid)+"|") {
+			r = true
+			return
+		} else {
+			if v, ok := CRAMs.CataRAMMap[uint32(fid)]; !ok { //防止用户输入的目录混乱。
+				return
+			} else {
+				fid = CRAMs.cataRAM[v].fid
+			}
+		}
+		loop++
+		if loop >= 108 { //防止用户输入的目录混乱导致死循环。
+			return
+		}
+	}
 	return
 }

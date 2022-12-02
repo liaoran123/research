@@ -20,7 +20,8 @@ func Idxfindpfx(w http.ResponseWriter, req *http.Request) {
 	kw := params["kw"]
 	top := params["top"]
 	itop, _ := strconv.Atoi(top)
-	r := base.Pcontent.Idx.GetPfx(kw, itop)
+	caid := params["caid"]
+	r := base.Pcontent.Idx.GetPfx(kw, caid, itop)
 	ip := Idxpfx{}
 	ip.Pfx = r
 	json.NewEncoder(w).Encode(ip)

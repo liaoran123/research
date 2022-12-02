@@ -52,7 +52,7 @@ func Newcontent() *content {
 //***********添加*******************
 //添加内容，将文章分成多个句子段落后添加到表
 func (c *content) TextSplit(text, split string) (section []string) {
-	itext := text //title+"\n"+text
+	itext := text //title+"~"+text
 	if split != "" {
 		//支持多个分段匹配标签。中文常见是“。”.
 		//空格是组合查询，由于支持英文，故而空格不作默认分隔符
@@ -146,7 +146,7 @@ func (c *content) InsertConAndIdx(id int, title, text, split, url string, fcatai
 			continue
 		}
 		if r { //添加内容
-			//err = Con.Getartdb().Db.Put(JoinBytes([]byte(c.tbn+"-"), IntToBytes(id), []byte("-"), IntToBytes(i)), []byte(s), nil)
+			//err = Con.Getartdb().Db.Put(JoinBytes([]byte(c.tbn+"~"), IntToBytes(id), []byte("~"), IntToBytes(i)), []byte(s), nil)
 			err = Con.Getartdb().Db.Put(c.setkey(id, i), []byte(s), nil)
 		} else {
 			return
@@ -161,19 +161,19 @@ func (c *content) InsertConAndIdx(id int, title, text, split, url string, fcatai
 
 //key=c-artid-secid
 func (c *content) setkey(artid, secid int) (r []byte) {
-	r = JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(secid))
+	r = JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
 	return
 }
 
 //删除内容
 func (c *content) DeleteConAndIdx(id int) (r bool) {
 	r = true
-	Prefix := JoinBytes([]byte(c.tbn+"-"), IntToBytes(id), []byte("-"))
+	Prefix := JoinBytes([]byte(c.tbn+"~"), IntToBytes(id), []byte("~"))
 	iter := Con.Getartdb().Db.NewIterator(util.BytesPrefix(Prefix), nil) //打开文章所有段落，遍历删除
 	var ks []string
 	var artid, secid int
 	for iter.Next() {
-		ks = strings.Split(string(iter.Key()), "-")
+		ks = strings.Split(string(iter.Key()), "~")
 		artid = BytesToInt([]byte(ks[1]))
 		secid = BytesToInt([]byte(ks[2]))
 		r = c.Idx.Act(artid, secid, 0, string(iter.Value()), c.Idx.Delete) //删除索引fcataid int 参数=0。删除只需key，不需要value。与fcataid无关。
@@ -189,7 +189,7 @@ func (c *content) DeleteConAndIdx(id int) (r bool) {
 //获取文章的所属目录id
 func (c *content) GetArtFCataId(id int) (r int) {
 	//文章内容约定，0段落=标题；1段落分隔符=split；2段落=url；3段落=fcataid。
-	Prefix := JoinBytes([]byte(c.tbn+"-"), IntToBytes(id), []byte("-"), IntToBytes(3))
+	Prefix := JoinBytes([]byte(c.tbn+"~"), IntToBytes(id), []byte("~"), IntToBytes(3))
 	data, _ := Con.Getartdb().Db.Get(Prefix, nil)
 	r, _ = strconv.Atoi(string(data))
 	return
@@ -197,7 +197,7 @@ func (c *content) GetArtFCataId(id int) (r int) {
 
 //获取一文章
 func (c *content) GetArtInfo(id int) (r Artinfo) {
-	Prefix := JoinBytes([]byte(c.tbn+"-"), IntToBytes(id), []byte("-"))
+	Prefix := JoinBytes([]byte(c.tbn+"~"), IntToBytes(id), []byte("~"))
 	iter := Con.Getartdb().Db.NewIterator(util.BytesPrefix(Prefix), nil)
 	i := -1
 	var title, split, url, text string
@@ -205,6 +205,8 @@ func (c *content) GetArtInfo(id int) (r Artinfo) {
 	buf := ArtBuf.Get().(*bytes.Buffer)
 	//文章内容约定，0段落=标题；1段落分隔符=split；2段落=url；3段落=fcataid。
 	for iter.Next() {
+		//fmt.Println(string(iter.Key()))
+		//fmt.Println(BytesToInt([]byte(strings.Split(string(iter.Key()), "~")[1])))
 		i++
 		if i == 0 {
 			title = string(iter.Value())
@@ -239,7 +241,7 @@ func (c *content) GetArtInfo(id int) (r Artinfo) {
 	r.Split = split
 	r.Fid = fid
 	r.Url = url
-	r.Text = strings.Replace(text, "﹣", "-", -1) //text = strings.Replace(text, "-", "﹣", -1) //-是系统保留字，需要转义为﹣。
+	r.Text = text //strings.Replace(text, "﹣", "~", -1) //text = strings.Replace(text, "~", "﹣", -1) //-是系统保留字，需要转义为﹣。
 	return
 }
 
@@ -281,7 +283,7 @@ func (c *content) Search(keyword, p, caids string, order bool, count int) (asids
 		e = true
 		key = string(iter.Key())
 		// - 该符号需要转义，最好使用\n分隔，不会冲突。
-		keys = strings.Split(key, "-")
+		keys = strings.Split(key, "~")
 		//ckw = keys[1]
 		artid = BytesToInt([]byte(keys[2])) //文章id
 		secid = BytesToInt([]byte(keys[3])) //段落id
@@ -321,37 +323,40 @@ func (c *content) Search(keyword, p, caids string, order bool, count int) (asids
 func (c *content) setlastkey(kw string, artid, secid int) string {
 	a := strconv.Itoa(artid)
 	s := strconv.Itoa(secid)
-	return kw + "," + a + "," + s
+	return kw + "~" + a + "~" + s
 }
 
 //在某个或多个目录下查找
 //caids目录id集合
 func (c *content) rand(cataid int, caids string) (r bool) {
-	if caids == "" || cataid == 0 {
-		r = true
-		return
-	}
-	ids := "|" + caids + "|"
-
-	fid := cataid //CRAMs.Get(artid - 1).fid //CRAMs.cataRAM[artid-1].fid
-	loop := 0
-	for fid > 0 { //遍历到顶级目录
-		if strings.Contains(ids, "|"+strconv.Itoa(fid)+"|") {
+	return rand(cataid, caids)
+	/*
+		if caids == "" || cataid == 0 {
 			r = true
 			return
-		} else {
-			if v, ok := CRAMs.CataRAMMap[uint32(fid)]; !ok { //防止用户输入的目录混乱。
+		}
+		ids := "|" + caids + "|"
+
+		fid := cataid //CRAMs.Get(artid - 1).fid //CRAMs.cataRAM[artid-1].fid
+		loop := 0
+		for fid > 0 { //遍历到顶级目录
+			if strings.Contains(ids, "|"+strconv.Itoa(fid)+"|") {
+				r = true
 				return
 			} else {
-				fid = CRAMs.cataRAM[v].fid
+				if v, ok := CRAMs.CataRAMMap[uint32(fid)]; !ok { //防止用户输入的目录混乱。
+					return
+				} else {
+					fid = CRAMs.cataRAM[v].fid
+				}
+			}
+			loop++
+			if loop >= 108 { //防止用户输入的目录混乱导致死循环。
+				return
 			}
 		}
-		loop++
-		if loop >= 108 { //防止用户输入的目录混乱导致死循环。
-			return
-		}
-	}
-	return
+		return
+	*/
 }
 
 //组合查询
@@ -390,11 +395,11 @@ func (c *content) Joinkey(p string) (r []byte) {
 	tp := strings.Replace(p, "\\u003c", "<", -1)
 	tp = strings.Replace(tp, "\\u003e", ">", -1)
 	tp = strings.Replace(tp, "\\u0026", "&", -1)
-	ps := strings.Split(tp, ",")
+	ps := strings.Split(tp, "~")
 	if len(ps) > 2 {
 		aid, _ := strconv.Atoi(ps[1])
 		sid, _ := strconv.Atoi(ps[2])
-		r = JoinBytes([]byte("i-"), []byte(ps[0]), []byte("-"), IntToBytes(aid), []byte("-"), IntToBytes(sid))
+		r = JoinBytes([]byte("i~"), []byte(ps[0]), []byte("~"), IntToBytes(aid), []byte("~"), IntToBytes(sid))
 	}
 	return
 }
@@ -412,7 +417,7 @@ func (c *content) GetOneSec(artid, secid int) (sec []byte) {
 	if artid == 0 {
 		return
 	}
-	sec, err = Con.Getartdb().Db.Get(JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(secid)), nil)
+	sec, err = Con.Getartdb().Db.Get(JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid)), nil)
 	Chekerr()
 	return
 }
@@ -423,8 +428,8 @@ func (c *content) IterOneSec(iter iterator.Iterator, artid, secid int) (sec []by
 	if artid == 0 {
 		return
 	}
-	//sec, err = Con.Getartdb().Db.Get(JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(secid)), nil)
-	k := JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(secid))
+	//sec, err = Con.Getartdb().Db.Get(JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid)), nil)
+	k := JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
 	if iter.Seek(k) {
 		sec = iter.Value()
 	}
@@ -438,17 +443,17 @@ func (c *content) GetArtPathInfo(artid, secid, minlentext int) (title, url, text
 
 	//ts := pubgo.Newts() //计算执行时间
 	iter := Con.Getartdb().Db.NewIterator(nil, nil)
-	k := JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(0))
+	k := JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(0))
 	ok := iter.Seek(k)
 	if ok {
 		title = string(iter.Value()) //文章标题
 	}
-	k = JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(2))
+	k = JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(2))
 	ok = iter.Seek(k)
 	if ok {
 		url = string(iter.Value()) //文章网址
 	}
-	k = JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(secid))
+	k = JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
 	ok = iter.Seek(k)
 	if !ok {
 		return
@@ -457,7 +462,7 @@ func (c *content) GetArtPathInfo(artid, secid, minlentext int) (title, url, text
 	var ks []string
 	var iaid, isid int //
 	for ok {
-		ks = strings.Split(string(iter.Key()), "-")
+		ks = strings.Split(string(iter.Key()), "~")
 		if len(ks) < 3 {
 			return
 		}
@@ -468,7 +473,7 @@ func (c *content) GetArtPathInfo(artid, secid, minlentext int) (title, url, text
 			break
 		}
 		value = string(iter.Value())
-		text += value + "\n"
+		text += value //+ "~"
 		if len([]rune(text)) >= minlentext {
 			break
 		}
@@ -486,7 +491,7 @@ func (c *content) GetArtPathInfo(artid, secid, minlentext int) (title, url, text
 //在当前段落id至向后10个段落区间读取内容累加。直至内容长度达到最小长度minlentext。
 func (c *content) IterMinLenText(iter iterator.Iterator, artid, secid, minlentext int) (r string, LastSecid int) {
 
-	k := JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(secid))
+	k := JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
 	ok := iter.Seek(k)
 	if !ok {
 		return
@@ -495,7 +500,7 @@ func (c *content) IterMinLenText(iter iterator.Iterator, artid, secid, minlentex
 	var ks []string
 	var iaid, isid int //
 	for ok {
-		ks = strings.Split(string(iter.Key()), "-")
+		ks = strings.Split(string(iter.Key()), "~")
 		iaid = BytesToInt([]byte(ks[1]))
 		isid = BytesToInt([]byte(ks[2]))
 		//fmt.Println(iaid, isid)
@@ -503,7 +508,7 @@ func (c *content) IterMinLenText(iter iterator.Iterator, artid, secid, minlentex
 			break
 		}
 		value = string(iter.Value())
-		r += value + "\n"
+		r += value + "~"
 		if len([]rune(r)) >= minlentext {
 			break
 		}
@@ -523,14 +528,14 @@ func (c *content) Getartniliter() iterator.Iterator {
 */
 /*
 func (c *content) GetMinLenText(artid, secid, minlentext int) (r string, LastSecid int) {
-	b := JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(secid))
-	e := JoinBytes([]byte(c.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(secid+10)) //最多10句，不够则忽略。
+	b := JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
+	e := JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid+10)) //最多10句，不够则忽略。
 	iter := Con.Getartdb().Db.NewIterator(&util.Range{Start: []byte(b), Limit: []byte(e)}, nil)
 	var value string
 	var ks []string
 	var iaid, isid int //
 	for iter.Next() {
-		ks = strings.Split(string(iter.Key()), "-")
+		ks = strings.Split(string(iter.Key()), "~")
 		iaid = BytesToInt([]byte(ks[1]))
 		isid = BytesToInt([]byte(ks[2]))
 		if iaid != artid { //已经是不同文章
@@ -538,7 +543,7 @@ func (c *content) GetMinLenText(artid, secid, minlentext int) (r string, LastSec
 		}
 		value = string(iter.Value())
 
-			r += value + "\n"
+			r += value + "~"
 			if len([]rune(r)) >= minlentext {
 				break
 			}

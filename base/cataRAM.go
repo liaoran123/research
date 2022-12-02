@@ -32,12 +32,12 @@ func NewCataRAMs() *CataRAMs {
 	}
 }
 func (c *CataRAMs) LoadCataRAM() {
-	Con.Getartdb().FindRangeFun("ca-", "ca-a", c.toRAM)
+	Con.Getartdb().FindRangeFun("ca~", "ca~a", c.toRAM)
 }
 func (c *CataRAMs) toRAM(k, v []byte) {
-	key := strings.Split(string(k), "-")
+	key := strings.Split(string(k), "~")
 	id := BytesToInt([]byte(key[1]))
-	value := strings.Split(string(v), "-")
+	value := strings.Split(string(v), "~")
 
 	fid := BytesToInt([]byte(value[1]))
 	name := value[0]

@@ -48,8 +48,8 @@ func (c *cata) Insert(id int, title, isleaf string, fid int) (r bool) {
 	r = c.Insertcata(id, title, isleaf, fid) //经过这里id=c.id
 	r = r && c.cfidx.Insert(fid, c.id)
 	//同时需要添加一篇只有目录标题而没有内容的文章，以便通过内容来搜索到目录。
-	r = r && PArticle.Insert(0, title, "", "", "0", id) //文章的fid就是目录的id。Insert(0...，0,表示id是自动增值。
-	if r {                                              //如果成功，添加目录到内存
+	r = r && PArticle.Insert(0, title, "", "。", "0", id) //文章的fid就是目录的id。Insert(0...，0,表示id是自动增值。
+	if r {                                               //如果成功，添加目录到内存
 		CRAMs.Append(c.id, fid, title) //= append(CRAMs.cataRAM, NewcataRAM(c.id, fid, title)) //实时加入内存
 		//c.ainc.Writelastid()
 	}
@@ -63,11 +63,18 @@ func (c *cata) Insertcata(id int, name, isleaf string, fid int) (r bool) {
 	} else {
 		c.id = id
 	}
-	//k=ca-id
-	//v=name-fid
-	//setkey
-	//err = Con.Getartdb().Db.Put(JoinBytes([]byte(c.tbn+"-"), IntToBytes(c.id)), JoinBytes([]byte(name+"-"), IntToBytes(fid), []byte("-")), nil) //添加目录标题
-	err = Con.Getartdb().Db.Put(c.setkey(c.id), JoinBytes([]byte(name+"-"), IntToBytes(fid), []byte("-"+isleaf)), nil) //添加目录标题
+	/*
+			//k=ca-id
+			//v=name-fid
+			//setkey
+
+		//fmt.Println(id, name, isleaf, fid)
+		if id == 42 {
+			fmt.Print("fff")
+		}
+	*/
+	err = Con.Getartdb().Db.Put(c.setkey(c.id), JoinBytes([]byte(name+"~"), IntToBytes(fid), []byte("~"+isleaf)), nil) //添加目录标题
+	//err = Con.Getartdb().Db.Put(c.setkey(c.id), []byte(name+"~"+fmt.Sprintf("%11s", strconv.Itoa(fid))+"~"+isleaf), nil) //添加目录标题
 	Chekerr()
 	r = err == nil
 	return
@@ -87,13 +94,14 @@ func (c *cata) GetCata(id int) (r CataInfo) {
 	if data == nil {
 		return
 	}
-	sdata := strings.Split(string(data), "-")
+	sdata := strings.Split(string(data), "~")
 	r.Id = id
 	r.Name = sdata[0]
 	if r.Name == "" {
 		return
 	}
 	r.Fid = BytesToInt([]byte(sdata[1]))
+	r.Isleaf = sdata[2]
 	return
 }
 
@@ -106,7 +114,7 @@ func (c *cata) ChildCatas(fid int) (r []CataInfo) {
 	return
 }
 func (c *cata) setkey(id int) (r []byte) {
-	r = JoinBytes([]byte(c.tbn+"-"), IntToBytes(id))
+	r = JoinBytes([]byte(c.tbn+"~"), IntToBytes(id)) //[]byte(c.tbn + "~" + fmt.Sprintf("%11s", strconv.Itoa(id))) //
 	return
 }
 
@@ -130,8 +138,8 @@ func (c *cata) Delete(id int) (r bool) {
 func (c *cata) Put(id, fid int, name string) (r bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	k := c.setkey(id) //JoinBytes([]byte(c.tbn+"-"), IntToBytes(id))
-	v := JoinBytes([]byte(name+"-"), IntToBytes(fid), []byte("-"))
+	k := c.setkey(id) //JoinBytes([]byte(c.tbn+"~"), IntToBytes(id))
+	v := JoinBytes([]byte(name+"~"), IntToBytes(fid), []byte("~"))
 	err = Con.Getartdb().Db.Put(k, v, nil)
 	Chekerr()
 	r = err == nil
@@ -145,7 +153,7 @@ func (c *cata) GetName(id int) (name string, fid int) {
 	if data == nil { //顶级目录没有数据
 		return
 	}
-	ds := strings.Split(string(data), "-")
+	ds := strings.Split(string(data), "~")
 	name = ds[0]
 	sfid := ds[1]
 	fid = BytesToInt([]byte(sfid))

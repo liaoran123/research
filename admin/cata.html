@@ -107,7 +107,7 @@
                         },
                         success: function (result) {
                             console.log(result)
-                            $("#fidname").html(result.name) //result.name目录名称
+                            $("#fidname").html(result.title) //result.name目录名称
                             $("#fcata").attr("href", "/admin/cata/?id=" + result.fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。                           
                         }
                     });

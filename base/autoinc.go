@@ -21,9 +21,9 @@ type Autoinc struct {
 func NewAutoinc(tbn string) *Autoinc {
 	var id int
 	//查询该表最大值+1，为当前自动增值的值。
-	iter := Con.Getartdb().Db.NewIterator(util.BytesPrefix([]byte(tbn+"-")), nil)
+	iter := Con.Getartdb().Db.NewIterator(util.BytesPrefix([]byte(tbn+"~")), nil)
 	if iter.Last() {
-		lid := strings.Split(string(iter.Key()), "-")[1]
+		lid := strings.Split(string(iter.Key()), "~")[1]
 		id = BytesToInt([]byte(lid)) + 1
 	}
 	if id == 0 {

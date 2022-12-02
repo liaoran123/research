@@ -16,7 +16,7 @@ func Newfididx() *fididx {
 //fid索引，通过fid找到artid
 //添加
 func (f *fididx) Insert(fid, artid int) (r bool) {
-	//JoinBytes([]byte(f.tbn+"-"), IntToBytes(fid), []byte("-"), IntToBytes(artid))
+	//JoinBytes([]byte(f.tbn+"~"), IntToBytes(fid), []byte("~"), IntToBytes(artid))
 	err = Con.Getartdb().Db.Put(f.setkey(fid, artid), []byte{}, nil)
 	Chekerr()
 	r = err == nil
@@ -35,6 +35,6 @@ func (f *fididx) Delete(fid, artid int) (r bool) {
 
 //key=fa-fid-artid
 func (f *fididx) setkey(fid, artid int) (r []byte) {
-	r = JoinBytes([]byte(f.tbn+"-"), IntToBytes(fid), []byte("-"), IntToBytes(artid))
+	r = JoinBytes([]byte(f.tbn+"~"), IntToBytes(fid), []byte("~"), IntToBytes(artid))
 	return
 }

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"research/base"
 	"strconv"
-	"strings"
 )
 
 //获取文章一段落内容
@@ -19,7 +18,7 @@ func artgetsec(w http.ResponseWriter, req *http.Request) {
 	st := sectext{}
 	if r != nil {
 		st.Text = string(r)
-		st.Text = strings.Replace(st.Text, "﹣", "-", -1) //text = strings.Replace(text, "-", "﹣", -1) //-是系统保留字，需要转义为﹣。
+		//st.Text = strings.Replace(st.Text, "﹣", "-", -1) //text = strings.Replace(text, "-", "﹣", -1) //-是系统保留字，需要转义为﹣。
 	} else {
 		st.Text = "【已结束】"
 	}

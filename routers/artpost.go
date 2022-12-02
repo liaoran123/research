@@ -6,7 +6,6 @@ import (
 	"research/base"
 	"research/pubgo"
 	"strconv"
-	"strings"
 )
 
 func artpost(w http.ResponseWriter, req *http.Request) {
@@ -18,7 +17,7 @@ func artpost(w http.ResponseWriter, req *http.Request) {
 	id := params["id"]
 	title := params["title"]
 	text := params["text"]
-	text = strings.Replace(text, "-", "﹣", -1) //-是系统保留字，需要转义为﹣。
+	//text = strings.Replace(text, "-", "﹣", -1) //-是系统保留字，需要转义为﹣。
 	/*
 		isdir := params["isdir"]
 			if isdir == "" {                           ////默认是文章

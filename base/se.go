@@ -3,7 +3,6 @@ package base
 import (
 	"research/pubgo"
 	"strconv"
-	"strings"
 
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 )
@@ -70,12 +69,12 @@ func (s *Se) Search(keyword, p, count, caids string, order bool) (rsetAll *RsetA
 			}*/
 
 		rset.Artid = iv.artid
-		if iv.artid == 0 { //用户未将分隔符"-"转义时会有这样的情况。
+		if iv.artid == 0 { //用户未将分隔符">"转义时会有这样的情况。
 			continue
 		}
 		rset.Secid = iv.secid
 		rset.Title, rset.ArtUrl, rset.Text, rset.LastSecid = s.cont.GetArtPathInfo(iv.artid, iv.secid, minlentext)
-		rset.Text = strings.Replace(rset.Text, "﹣", "-", -1) //text = strings.Replace(text, "-", "﹣", -1) //-是系统保留字，需要转义为﹣。
+		//rset.Text = strings.Replace(rset.Text, "﹣", ">", -1) //text = strings.Replace(text, ">", "﹣", -1) //-是系统保留字，需要转义为﹣。
 		if rset.ArtUrl == "0" {
 			rset.ArtUrl = ""
 		}

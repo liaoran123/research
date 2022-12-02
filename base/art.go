@@ -62,16 +62,16 @@ func (a *Article) GetCataArt(fcataid, count int, p string) (r RArtItem) {
 	if ct > 108 || ct == 0 { //每页最大和默认108条记录
 		ct = 108
 	}
-	Prefix := JoinBytes([]byte(a.cont.fidx.tbn+"-"), IntToBytes(fcataid), []byte("-"))
+	Prefix := JoinBytes([]byte(a.cont.fidx.tbn+"~"), IntToBytes(fcataid), []byte("~"))
 	iter := Con.Getartdb().Db.NewIterator(util.BytesPrefix([]byte(Prefix)), nil)
 	var b bool
 	if p == "" {
 		b = iter.First()
 	} else { //重新组成key
-		ps := strings.Split(p, ",")
+		ps := strings.Split(p, "~")
 		cid, _ := strconv.Atoi(ps[0])
 		aid, _ := strconv.Atoi(ps[1])
-		pkey := JoinBytes([]byte(a.cont.fidx.tbn+"-"), IntToBytes(cid), []byte("-"), IntToBytes(aid))
+		pkey := JoinBytes([]byte(a.cont.fidx.tbn+"~"), IntToBytes(cid), []byte("~"), IntToBytes(aid))
 		b = iter.Seek([]byte(pkey))
 	}
 	var artid, cataid, loop int
@@ -81,10 +81,10 @@ func (a *Article) GetCataArt(fcataid, count int, p string) (r RArtItem) {
 	var ai []ArtItem
 	artItem := ArtItem{}
 	for b {
-		ks = strings.Split(string(iter.Key()), "-")
+		ks = strings.Split(string(iter.Key()), "~")
 		artid = BytesToInt([]byte(ks[2]))
 		cataid = BytesToInt([]byte(ks[1]))
-		artkey = JoinBytes([]byte(a.cont.tbn+"-"), IntToBytes(artid), []byte("-"), IntToBytes(0)) //文章的第0个段落就文章标题
+		artkey = JoinBytes([]byte(a.cont.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(0)) //文章的第0个段落就文章标题
 		sec, _ = Con.Getartdb().Db.Get(artkey, nil)
 		/*
 			if string(sec) == "" { //被删除的不显示
@@ -94,7 +94,7 @@ func (a *Article) GetCataArt(fcataid, count int, p string) (r RArtItem) {
 		artItem.Id = artid
 		artItem.Title = string(sec)
 		ai = append(ai, artItem)
-		lastkey = strconv.Itoa(cataid) + "," + strconv.Itoa(artid)
+		lastkey = strconv.Itoa(cataid) + "~" + strconv.Itoa(artid)
 		loop++
 		if loop >= ct { //每页最多返回108条记录。必须限制，以免数据量大拖垮资源。
 			break

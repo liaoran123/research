@@ -22,12 +22,13 @@ func cataput(w http.ResponseWriter, req *http.Request) {
 	ifid, _ := strconv.Atoi(fid)
 	name := params["name"]
 	psw := params["psw"]
+	isleaf := params["isleaf"]
 	if psw != pubgo.ConfigMap["pws"].(string) { //密码不对
 		Rmsg.Msg = "密码不对"
 		json.NewEncoder(w).Encode(Rmsg)
 		return
 	}
-	r := base.Pcata.Put(iid, ifid, name)
+	r := base.Pcata.Put(iid, ifid, name, isleaf)
 	//ys := ts.Gstrts()
 	Rmsg.Succ = r
 	if r {

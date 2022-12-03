@@ -135,7 +135,7 @@ func (c *cata) Delete(id int) (r bool) {
 }
 
 //修改目录
-func (c *cata) Put(id, fid int, name string) (r bool) {
+func (c *cata) Put(id, fid int, name, isleaf string) (r bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	k := c.setkey(id) //JoinBytes([]byte(c.tbn+"~"), IntToBytes(id))
@@ -144,7 +144,7 @@ func (c *cata) Put(id, fid int, name string) (r bool) {
 	Chekerr()
 	r = err == nil
 	if r { //修改内存
-		CRAMs.Put(id, fid, name)
+		CRAMs.Put(id, fid, name, isleaf)
 	}
 	return
 }

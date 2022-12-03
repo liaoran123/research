@@ -71,11 +71,12 @@ func (c *CataRAMs) Del(id int) {
 	if id, ok := c.CataRAMMap[uint32(id)]; ok {
 		c.cataRAM[id].fid = 0
 		c.cataRAM[id].name = ""
+		c.cataRAM[id].isleaf = ""
 	}
 }
 
 //通过目录id修改。
-func (c *CataRAMs) Put(id, fid int, name string) {
+func (c *CataRAMs) Put(id, fid int, name, isleaf string) {
 	if id, ok := c.CataRAMMap[uint32(id)]; ok {
 		c.cataRAM[id].fid = fid
 		c.cataRAM[id].name = name

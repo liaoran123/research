@@ -1,6 +1,7 @@
 package base
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -69,6 +70,10 @@ func (a *Article) GetCataArt(fcataid, count int, p string) (r RArtItem) {
 		b = iter.First()
 	} else { //重新组成key
 		ps := strings.Split(p, "~")
+		if len(ps) < 2 {
+			fmt.Println(ps, fcataid, count)
+			return
+		}
 		cid, _ := strconv.Atoi(ps[0])
 		aid, _ := strconv.Atoi(ps[1])
 		pkey := JoinBytes([]byte(a.cont.fidx.tbn+"~"), IntToBytes(cid), []byte("~"), IntToBytes(aid))

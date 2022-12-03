@@ -1,7 +1,6 @@
 package base
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -70,8 +69,8 @@ func (a *Article) GetCataArt(fcataid, count int, p string) (r RArtItem) {
 		b = iter.First()
 	} else { //重新组成key
 		ps := strings.Split(p, "~")
-		if len(ps) < 2 {
-			fmt.Println(ps, fcataid, count)
+		if len(ps) < 2 { //这些都是爬虫错误参数导致的错误。
+			//fmt.Println(ps, fcataid, count)
 			return
 		}
 		cid, _ := strconv.Atoi(ps[0])

@@ -9,15 +9,16 @@ var CRAMs *CataRAMs
 //目录数据少，使用频繁，故适宜加载入内存
 //删除目录时不能真正删除，只需将除id外置空即可。这样保证通过id直接匹配数组下标。
 type cataRAM struct {
-	/*id,*/ fid int
-	name        string
+	/*id,*/ fid  int
+	name, isleaf string
 }
 
-func NewcataRAM(fid int, name string) *cataRAM {
+func NewcataRAM(fid int, name, isleaf string) *cataRAM {
 	return &cataRAM{
 		//id:   id,
-		fid:  fid,
-		name: name,
+		fid:    fid,
+		name:   name,
+		isleaf: isleaf,
 	}
 }
 
@@ -40,15 +41,16 @@ func (c *CataRAMs) toRAM(k, v []byte) {
 	value := strings.Split(string(v), "~")
 
 	fid := BytesToInt([]byte(value[1]))
+	isleaf := value[2]
 	name := value[0]
 
-	c.Append(id, fid, name)
+	c.Append(id, fid, name, isleaf)
 	//c.cataRAM = append(c.cataRAM, NewcataRAM(fid, name))
 	//c.CataRAMMap[uint32(id)] = uint32(len(c.cataRAM)) //记录id对应的数组下标
 }
-func (c *CataRAMs) Append(id, fid int, name string) {
+func (c *CataRAMs) Append(id, fid int, name, isleaf string) {
 	if v, ok := c.CataRAMMap[uint32(id)]; !ok {
-		c.cataRAM = append(c.cataRAM, NewcataRAM(fid, name))
+		c.cataRAM = append(c.cataRAM, NewcataRAM(fid, name, isleaf))
 		c.CataRAMMap[uint32(id)] = uint32(len(c.cataRAM)) - 1 //记录id对应的数组下标
 	} else { //如果存在即修改。事务回滚会有出现这个情况。
 		c.cataRAM[v].fid = fid
@@ -92,6 +94,7 @@ func (c *CataRAMs) GetCataDir(cataid int) (r []CataInfo) {
 			cd.Id = cid
 			cd.Name = CRAMs.cataRAM[i].name
 			cd.Fid = CRAMs.cataRAM[i].fid
+			cd.Isleaf = CRAMs.cataRAM[i].isleaf
 			cid = cd.Fid //CRAMs.cataRAM[i].fid
 			r = append(r, cd)
 		} else { //用户没有设置目录

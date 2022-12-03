@@ -50,7 +50,7 @@ func (c *cata) Insert(id int, title, isleaf string, fid int) (r bool) {
 	//同时需要添加一篇只有目录标题而没有内容的文章，以便通过内容来搜索到目录。
 	r = r && PArticle.Insert(0, title, "", "。", "0", id) //文章的fid就是目录的id。Insert(0...，0,表示id是自动增值。
 	if r {                                               //如果成功，添加目录到内存
-		CRAMs.Append(c.id, fid, title) //= append(CRAMs.cataRAM, NewcataRAM(c.id, fid, title)) //实时加入内存
+		CRAMs.Append(c.id, fid, title, "0") //= append(CRAMs.cataRAM, NewcataRAM(c.id, fid, title)) //实时加入内存
 		//c.ainc.Writelastid()
 	}
 	return

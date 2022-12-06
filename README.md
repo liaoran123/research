@@ -42,6 +42,8 @@ ReSearch，可以自定义到段落，句子等等。<br>
 打开对应系统的可执行文件即可运作。<br> 
 
 ##案例<br> 
+[千佛网](http://www.soufoshuo.com)
+<br> 
 [四库全书搜索引擎](http://www.skqs12.com)
 <br> 
 <br> 

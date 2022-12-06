@@ -47,7 +47,8 @@ func addrouters() {
 	http.HandleFunc("/api/art/", routers.Art)       //文章，get,post,put,delete
 	http.HandleFunc("/api/search/", routers.Search) //搜索
 
-	http.HandleFunc("/api/artitem/", routers.Artitem)       //获取目录下的文章列表
+	http.HandleFunc("/api/art/item/", routers.Artitem)      //获取目录下的文章列表
+	http.HandleFunc("/api/art/meta/", routers.Meta)         //获取文章摘录
 	http.HandleFunc("/api/idxfindpfx/", routers.Idxfindpfx) //搜索词为前缀的相关词
 }
 

@@ -25,7 +25,7 @@ func Search(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	order := params["order"]
-	r := base.PSe.Search(kw, p, count, caids, order == "0")
+	r := base.PSe.Search(kw, p, count, caids, order != "1")
 	//ys := ts.Gstrts()
 	json.NewEncoder(w).Encode(r)
 	r.Reset() //置空

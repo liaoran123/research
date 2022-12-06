@@ -286,6 +286,10 @@ func (c *content) Search(keyword, p, caids string, order bool, count int) (asids
 		keys = strings.Split(key, "~")
 		//ckw = keys[1]
 		artid = BytesToInt([]byte(keys[2])) //文章id
+		if artid == 0 {
+			ok = move[order](iter)
+			continue
+		}
 		secid = BytesToInt([]byte(keys[3])) //段落id
 		lastkey = c.setlastkey(keys[1], artid, secid)
 		cataid = BytesToInt(iter.Value()) //iter.Value()就是文章的目录id
@@ -440,7 +444,6 @@ func (c *content) IterOneSec(iter iterator.Iterator, artid, secid int) (sec []by
 //获取搜索结果的节录内容
 //在当前段落id至向后10个段落区间读取内容累加。直至内容长度达到最小长度minlentext。
 func (c *content) GetArtPathInfo(artid, secid, minlentext int) (title, url, text string, LastSecid int) {
-
 	//ts := pubgo.Newts() //计算执行时间
 	iter := Con.Getartdb().Db.NewIterator(nil, nil)
 	k := JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(0))
@@ -453,14 +456,53 @@ func (c *content) GetArtPathInfo(artid, secid, minlentext int) (title, url, text
 	if ok {
 		url = string(iter.Value()) //文章网址
 	}
-	k = JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
-	ok = iter.Seek(k)
+	text, LastSecid = c.GetMeta(artid, secid, minlentext)
+	/*
+		k = JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
+		ok = iter.Seek(k)
+		if !ok {
+			return
+		}
+		var value string
+		var ks []string
+		var iaid, isid int //
+		for ok {
+			ks = strings.Split(string(iter.Key()), "~")
+			if len(ks) < 3 {
+				return
+			}
+			iaid = BytesToInt([]byte(ks[1]))
+			isid = BytesToInt([]byte(ks[2]))
+			//fmt.Println(iaid, isid)
+			if iaid != artid { //已经是不同文章
+				break
+			}
+			value = string(iter.Value())
+			text += value //+ "~"
+			if len([]rune(text)) >= minlentext {
+				break
+			}
+			iter.Next()
+		}
+		Release(iter)
+		LastSecid = isid
+	*/
+	//ys := ts.Gstrts()
+	//fmt.Println(artid, secid, ys)
+	return
+}
+
+//根据文章id和段落id获取一段摘录经文
+func (c *content) GetMeta(artid, secid, minlentext int) (r string, isid int) {
+	iter := Con.Getartdb().Db.NewIterator(nil, nil)
+	k := JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(secid))
+	ok := iter.Seek(k)
 	if !ok {
 		return
 	}
 	var value string
 	var ks []string
-	var iaid, isid int //
+	var iaid int //
 	for ok {
 		ks = strings.Split(string(iter.Key()), "~")
 		if len(ks) < 3 {
@@ -473,16 +515,13 @@ func (c *content) GetArtPathInfo(artid, secid, minlentext int) (title, url, text
 			break
 		}
 		value = string(iter.Value())
-		text += value //+ "~"
-		if len([]rune(text)) >= minlentext {
+		r += value //+ "~"
+		if len([]rune(r)) >= minlentext {
 			break
 		}
 		iter.Next()
 	}
 	Release(iter)
-	LastSecid = isid
-	//ys := ts.Gstrts()
-	//fmt.Println(artid, secid, ys)
 	return
 }
 

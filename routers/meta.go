@@ -24,13 +24,13 @@ func Meta(w http.ResponseWriter, req *http.Request) {
 	title, _, text, _ := base.Pcontent.GetArtPathInfo(iid, isecid, ilen)
 	st := meta{}
 	if title != "" {
-		st.Iitle = title
+		st.Title = title
 		st.Text = text
 	}
 	json.NewEncoder(w).Encode(st)
 }
 
 type meta struct {
-	Iitle string `json:"Iitle" `
+	Title string `json:"title" `
 	Text  string `json:"text" `
 }

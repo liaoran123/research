@@ -21,12 +21,16 @@ func Meta(w http.ResponseWriter, req *http.Request) {
 	if ilen == 0 {
 		ilen = 21
 	}
-	r, _ := base.Pcontent.GetMeta(iid, isecid, ilen)
-	st := sectext{}
-	if r != "" {
-		st.Text = r
-	} else {
-		st.Text = "【已结束】"
+	title, _, text, _ := base.Pcontent.GetArtPathInfo(iid, isecid, ilen)
+	st := meta{}
+	if title != "" {
+		st.Iitle = title
+		st.Text = text
 	}
 	json.NewEncoder(w).Encode(st)
+}
+
+type meta struct {
+	Iitle string `json:"Iitle" `
+	Text  string `json:"text" `
 }

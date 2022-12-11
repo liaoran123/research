@@ -451,10 +451,12 @@ func (c *content) GetArtPathInfo(artid, secid, minlentext int) (title, url, text
 	if ok {
 		title = string(iter.Value()) //文章标题
 	}
-	//k = JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(2))
-	//ok = iter.Seek(k)
-	iter.Next()
-	iter.Next()
+	/*
+		k = JoinBytes([]byte(c.tbn+"~"), IntToBytes(artid), []byte("~"), IntToBytes(2))
+		ok = iter.Seek(k)
+	*/
+	ok = iter.Next()
+	ok = iter.Next()
 	if ok {
 		url = string(iter.Value()) //文章网址
 	}

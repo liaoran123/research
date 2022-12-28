@@ -24,7 +24,7 @@ func Art(w http.ResponseWriter, req *http.Request) {
 		artmethod["POST"] = artpost     //添加
 		artmethod["GET"] = artget       //打开
 		artmethod["DELETE"] = artdelete //删除
-		artmethod["PUT"] = artpost      //artput       //修改
+		artmethod["PUT"] = artput       //修改
 	}
 	if f, ok := artmethod[req.Method]; ok {
 		f(w, req)

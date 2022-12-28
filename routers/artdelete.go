@@ -1,37 +1,42 @@
 package routers
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
+	"research/xbdb"
 	"strconv"
-
-	"research/base"
-	"research/pubgo"
 )
 
 func artdelete(w http.ResponseWriter, req *http.Request) {
-
-	//ts := pubgo.Newts() //计算执行时间
-
 	params := postparas(req)
 	Rmsg := NewRmsg()
-	psw := params["psw"]
-	if psw != pubgo.ConfigMap["pws"].(string) { //密码不对
+	serpsw := ConfigMap["pws"].(string)                             //服务器端不设置密码，即不可以进行操作
+	if serpsw == "" || params["psw"] != ConfigMap["pws"].(string) { //密码不对
 		Rmsg.Msg = "密码不对"
 		json.NewEncoder(w).Encode(Rmsg)
 		return
 	}
 	id := params["id"]
-	iid, _ := strconv.Atoi(id)
-	r := base.PArticle.Delete(iid)
-	//ys := ts.Gstrts()
-	Rmsg.Succ = r
-	if r {
-		Rmsg.Msg = "提交成功。"
-	} else {
-		Rmsg.Msg = "提交失败。"
+	r := delete("art", id)
+	if !r.Succ {
+		json.NewEncoder(w).Encode(r)
+		return
 	}
-	//Rmsg.Time = ys
+	iid, _ := strconv.Atoi(params["id"])
+	bid := xbdb.IntToBytes(iid)
+	idxvalue := Table["c"].Ifo.FieldChByte("id", string(bid))
+	df := new(delfun)
+	Table["c"].Select.WherePKLikeFun(idxvalue, 0, -1, true, df.delc)
+	json.NewEncoder(w).Encode(df.r)
+}
 
-	json.NewEncoder(w).Encode(Rmsg)
+type delfun struct {
+	r xbdb.ReInfo
+}
+
+func (d *delfun) delc(rd []byte) bool {
+	ks := bytes.Split(rd, []byte(xbdb.Split))
+	d.r = Table["c"].Delete(ks[0])
+	return d.r.Succ
 }

@@ -1,0 +1,180 @@
+//小白数据库
+//表信息
+package xbdb
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/util"
+)
+
+type XB struct {
+	Db *leveldb.DB
+}
+
+//iter的所有动作
+var (
+	bpos map[bool]func(iter iterator.Iterator) bool //起始位置。升序，first；降序，last
+	move map[bool]func(iter iterator.Iterator) bool //移动netx, prev
+)
+
+func NewXB(path string) *XB { //*leveldb.DB {
+	db, err := leveldb.OpenFile(path, nil) //"path/to/db"
+	if err != nil {
+		fmt.Println(err)
+		log.Fatal(err)
+	}
+	bpos = make(map[bool]func(iter iterator.Iterator) bool)
+	bpos[true] = first
+	bpos[false] = last
+	move = make(map[bool]func(iter iterator.Iterator) bool)
+	move[true] = next
+	move[false] = prev
+
+	return &XB{Db: db}
+}
+
+func first(iter iterator.Iterator) bool {
+	//fmt.Println("First")
+	return iter.First()
+}
+func last(iter iterator.Iterator) bool {
+	//fmt.Println("Last")
+	return iter.Last()
+}
+func prev(iter iterator.Iterator) bool {
+	//fmt.Println("Prev")
+	return iter.Prev()
+}
+func next(iter iterator.Iterator) bool {
+	//fmt.Println("Next")
+	return iter.Next()
+}
+
+//整个数据库数据游标
+func (x *XB) Nil() (iter iterator.Iterator) {
+	iter = x.Db.NewIterator(nil, nil)
+	return
+}
+
+//前缀匹配数据游标
+func (x *XB) Prefix(key []byte) (iter iterator.Iterator) {
+	iter = x.Db.NewIterator(util.BytesPrefix([]byte(key)), nil)
+	return
+}
+
+//范围数据游标
+func (x *XB) Rand(b, e []byte) (iter iterator.Iterator) {
+	iter = x.Db.NewIterator(&util.Range{Start: b, Limit: e}, nil)
+	return
+}
+
+/*
+遍历数据库
+*/
+func (x *XB) ForDb(f func(k, v []byte) bool) {
+	iter := x.Nil()
+	for iter.Next() {
+		if f(iter.Key(), iter.Value()) {
+		} else {
+			iter.Release()
+			return
+		}
+	}
+	iter.Release()
+}
+
+func (x *XB) Seekiter(key []byte) (iter iterator.Iterator, ok bool) {
+	iter = x.Nil()
+	ok = iter.Seek(key)
+	return
+}
+func (x *XB) Prefixiter(key []byte, asc bool) (iter iterator.Iterator, ok bool) {
+	iter = x.Prefix(key)
+	ok = bpos[asc](iter)
+	return
+}
+func (x *XB) Randiter(bkey, ekey []byte, asc bool) (iter iterator.Iterator, ok bool) {
+	iter = x.Rand(bkey, ekey)
+	ok = bpos[asc](iter)
+	return
+}
+
+/*
+前缀遍历
+bint 第几条开始
+asc,升/降序
+*/
+func (x *XB) FindPfx(key []byte, asc bool, bint int, f func(k, v []byte) bool) {
+	iter, ok := x.Prefixiter(key, asc)
+	iters := NewIters(iter, ok, asc, bint, f)
+	iters.Find()
+}
+
+/*
+范围遍历
+asc,升/降序
+*/
+func (x *XB) FindRand(bkey, ekey []byte, asc bool, bint int, f func(k, v []byte) bool) {
+	iter, ok := x.Randiter(bkey, ekey, asc)
+	iters := NewIters(iter, ok, asc, bint, f)
+	iters.Find()
+}
+
+/*
+定位遍历
+asc,升/降序
+*/
+func (x *XB) FindSeek(key []byte, asc bool, bint int, f func(k, v []byte) bool) {
+	iter, ok := x.Seekiter(key)
+	iters := NewIters(iter, ok, asc, bint, f)
+	iters.Find()
+}
+
+/*
+定位遍历
+asc,升/降序
+
+func (x *XB) FindSeek1(key []byte, asc bool, f func(k, v []byte) bool) {
+	iter := x.Nil()
+	ok := iter.Seek(key)
+	for ok {
+		if f(iter.Key(), iter.Value()) {
+			ok = move[asc](iter)
+		} else {
+			iter.Release()
+			return
+		}
+	}
+	iter.Release()
+}
+
+
+1,匹配遍历
+2,范围遍历
+asc,升/降序
+
+func (x *XB) Find1(keys [][]byte, asc bool, f func(k, v []byte) bool) {
+	var iter iterator.Iterator
+	klen := len(keys)
+	switch klen {
+	case 1:
+		iter = x.Prefix(keys[0])
+	case 2:
+		iter = x.Rand(keys[0], keys[1])
+	}
+	ok := bpos[asc](iter)
+	for ok {
+		if f(iter.Key(), iter.Value()) {
+			ok = move[asc](iter)
+		} else {
+			iter.Release()
+			return
+		}
+	}
+	iter.Release()
+}
+*/

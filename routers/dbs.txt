@@ -1,0 +1,60 @@
+package routers
+
+import (
+	"log"
+	"research/pubgo"
+	"strconv"
+
+	"github.com/syndtr/goleveldb/leveldb"
+)
+
+var sedb *Dbs //搜索引擎数据库
+
+//数据库连接管理
+type Dbs struct {
+	count int           //索引分库个数
+	Xb    *leveldb.DB   //文章数据库
+	XbIdx []*leveldb.DB //对应索引分库连接
+}
+
+//建立数据库连接
+func NewDbs() *Dbs {
+	count := 0
+	if ConfigMap["dbidxcount"] != nil {
+		count = int(ConfigMap["dbidxcount"].(float64))
+	}
+	path := pubgo.GetCurrentAbPath()
+	xb, err := leveldb.OpenFile(path, nil)
+	if err != nil {
+		log.Fatal(err)
+		return nil
+	}
+	var XbIdx []*leveldb.DB
+	for i := 0; i < count; i++ {
+		db, err := leveldb.OpenFile(path+"dbidx"+strconv.Itoa(i), nil)
+		if err != nil {
+			log.Fatal(err)
+			return nil
+		}
+		XbIdx = append(XbIdx, db)
+	}
+	return &Dbs{
+		count: count,
+		Xb:    xb,
+		XbIdx: XbIdx,
+	}
+}
+
+//获取索引库，由于兼容企业版分库，故而稍微麻烦。
+func (c *Dbs) Getidxdb(word string) *leveldb.DB {
+	if c.count > 0 { //是企业版则索引分库
+		return c.XbIdx[int([]rune(word)[0])%c.count]
+	} else {
+		return c.Xb
+	}
+}
+
+//文章的库连接
+func (c *Dbs) Getdb() *leveldb.DB {
+	return c.Xb
+}

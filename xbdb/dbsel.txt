@@ -1,0 +1,189 @@
+//小白数据库
+//数据库查询
+package xbdb
+
+import (
+	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/util"
+)
+
+//整个数据库数据游标
+func (x *XB) Nil() (iter iterator.Iterator) {
+	iter = x.Db.NewIterator(nil, nil)
+	return
+}
+
+//前缀匹配数据游标
+func (x *XB) Prefix(key []byte) (iter iterator.Iterator) {
+	iter = x.Db.NewIterator(util.BytesPrefix([]byte(key)), nil)
+	return
+}
+
+//范围数据游标
+func (x *XB) Rand(b, e []byte) (iter iterator.Iterator) {
+	iter = x.Db.NewIterator(&util.Range{Start: b, Limit: e}, nil)
+	return
+}
+
+/*
+遍历数据库
+*/
+func (x *XB) ForDb(f func(k, v []byte) bool) {
+	iter := x.Nil()
+	for iter.Next() {
+		if f(iter.Key(), iter.Value()) {
+		} else {
+			iter.Release()
+			return
+		}
+	}
+	iter.Release()
+}
+
+//定位游标
+func (x *XB) Seekiter(key []byte) (iter iterator.Iterator, ok bool) {
+	iter = x.Nil()
+	ok = iter.Seek(key)
+	return
+}
+
+//前缀游标
+func (x *XB) Prefixiter(key []byte, asc bool) (iter iterator.Iterator, ok bool) {
+	iter = x.Prefix(key)
+	ok = bpos[asc](iter)
+	return
+}
+
+//范围游标
+func (x *XB) Randiter(bkey, ekey []byte, asc bool) (iter iterator.Iterator, ok bool) {
+	iter = x.Rand(bkey, ekey)
+	ok = bpos[asc](iter)
+	return
+}
+
+/*
+前缀遍历
+bint 第几条开始
+asc,升/降序
+*/
+func (x *XB) FindPfx(key []byte, asc bool, b, count int) (kvs []KV) {
+	iter, ok := x.Prefixiter(key, asc)
+	kvs = NewIters(iter, ok, asc, b, count).ForData()
+	return
+}
+
+//前缀遍历,执行函数为参数
+func (x *XB) FindPfxFun(key []byte, asc bool, f func(k, v []byte) bool) {
+	iter, ok := x.Prefixiter(key, asc)
+	NewIters(iter, ok, asc, 0, -1).ForDataFun(f)
+}
+
+/*
+范围遍历
+asc,升/降序
+*/
+func (x *XB) FindRand(bkey, ekey []byte, asc bool, b, count int) (kvs []KV) {
+	iter, ok := x.Randiter(bkey, ekey, asc)
+	kvs = NewIters(iter, ok, asc, b, count).ForData()
+	return
+}
+
+//范围遍历,执行函数为参数
+func (x *XB) FindRandFun(bkey, ekey []byte, asc bool, f func(k, v []byte) bool) {
+	iter, ok := x.Randiter(bkey, ekey, asc)
+	NewIters(iter, ok, asc, 0, -1).ForDataFun(f)
+}
+
+/*
+定位遍历
+asc,升/降序
+*/
+func (x *XB) FindSeek(key []byte, asc bool, b, count int) (kvs []KV) {
+	iter, ok := x.Seekiter(key)
+	kvs = NewIters(iter, ok, asc, b, count).ForData()
+	return
+}
+
+//定位遍历,执行函数为参数
+func (x *XB) FindSeekFun(key []byte, asc bool, f func(k, v []byte) bool) {
+	iter, ok := x.Seekiter(key)
+	NewIters(iter, ok, asc, 0, -1).ForDataFun(f)
+}
+
+//获取一个key的values
+func (x *XB) GetValue(key []byte) (r []byte) {
+	r, _ = x.Db.Get(key, nil)
+	return
+}
+
+//根据表和主键获取表的一条记录（获取一个key的values）
+func (x *XB) GetRecord(tbname, fieldvalue []byte) (r []byte) {
+	key := GetPkKey(tbname, fieldvalue)
+	r = x.GetValue(key)
+	return
+}
+
+//根据表和主键获取表的一条记录（获取一个key的values）
+func (x *XB) GetOneRecord(tbname, fieldvalue []byte) (r []KV) {
+	key := GetPkKey(tbname, fieldvalue)
+	value := x.GetValue(key)
+	kv := KV{}
+	keys := strings.Split(kv.K, Split)
+	pk := []byte(keys[len(keys)-1])
+	kv.K = string(pk)
+	kv.V = string(value)
+	r = append(r, kv)
+	return
+}
+
+/*
+var bytespool = sync.Pool{
+	New: func() interface{} {
+		return new([][]byte)
+	},
+}
+*/
+
+//根据索引获取索引记录列表
+func (x *XB) GetRecordsForIdx(tbname, idxname, idxvalue []byte, b, count int) (kvs []KV) {
+	key := GetIdxPfx(tbname, idxname, idxvalue)
+	kvs = x.FindPfx(key, true, b, count)
+	return
+}
+
+//根据索引记录列表返回表记录数据
+func (x *XB) GetDataForIdx(tbname []byte, kvs []KV) (r []KV) {
+	var keys []string
+	var pk, pkval []byte
+	tkv := KV{}
+	for _, kv := range kvs {
+		keys = strings.Split(kv.K, Split)
+		pk = []byte(keys[len(keys)-1])
+		pkval = x.GetRecord(tbname, pk)
+		tkv.K = string(pk)
+		tkv.V = string(pkval)
+		r = append(r, tkv)
+	}
+	return
+}
+
+//根据索引记录列表返回表记录数据
+//b，开始记录，count，返回条数
+func (x *XB) GetTableRecordForIdx(tbname, idxfield, idxvalue []byte, b, count int) (r []KV) {
+	ks := x.GetRecordsForIdx(tbname, idxfield, idxvalue, b, count)
+	r = x.GetDataForIdx(tbname, ks)
+	return
+}
+
+//根据索引查询表记录，执行函数为参数
+func (x *XB) GetTableRecordForIdxFun(tbname, idxfield, idxvalue []byte, f func(k, v []byte) bool) {
+	key := GetIdxPfx(tbname, idxfield, idxvalue)
+	ks := x.FindPfx(key, true, 0, -1)
+	for _, kv := range ks {
+		if !f([]byte(kv.K), []byte(kv.V)) {
+			return
+		}
+	}
+}

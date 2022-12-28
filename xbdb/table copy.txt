@@ -1,0 +1,87 @@
+//小白数据库
+//表信息
+package xbdb
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb/util"
+)
+
+//表的类
+type Table struct {
+	Tbifo *TableInfo
+}
+
+func NewTable() *Table {
+	return &Table{}
+}
+
+//添加/修改数据，默认数据与字段一一对应。
+func (t *Table) Insert(tbname string, vals []string) (succ bool, info string) {
+	if t.Tbifo.Name != tbname {
+		t.Tbifo = t.Tbifo.Open(tbname)
+	}
+	if len(vals) != len(t.Tbifo.Fields) {
+		info = "字段参数长短不匹配！"
+		return
+	}
+	prefix := t.Tbifo.Name + Split
+	err = Xb.Put([]byte(prefix+vals[0]), []byte(strings.Join(vals[1:], Split)), nil)
+	if err != nil {
+		info = err.Error()
+		return
+	}
+	//添加表索引
+	idxprefix := t.Tbifo.Name + ",idx" + Split
+	idx := -1
+	for _, i := range t.Tbifo.Idxs {
+		/*//找出字段对应的数组下标
+		for j, f := range t.Tbifo.Fields {
+			idx = j
+			if i == f {
+				break
+			} else {
+				idx = -1
+			}
+		}
+		if idx == -1 {
+			continue
+		}*/
+		idx, _ = strconv.Atoi(i)
+		err = Xb.Put([]byte(idxprefix+vals[idx]), []byte(vals[0]), nil) //vals[0]=主键
+		if err != nil {
+			succ = false
+			info = err.Error()
+			return
+		}
+	}
+	succ = true
+	info = "添加/修改成功！"
+	return
+}
+
+//删除表数据
+func (t *Table) Delete(tbname string) (succ bool, info string) {
+	if t.Tbifo.Name != tbname {
+		t.Tbifo = t.Tbifo.Open(tbname)
+	}
+	tbpfx := t.Tbifo.Name + Split
+	iter := Xb.NewIterator(util.BytesPrefix([]byte(tbpfx)), nil)
+	for iter.Next() {
+		err = Xb.Delete(iter.Key(), nil)
+		if err != nil {
+			info = err.Error()
+			succ = false
+			break
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		info = err.Error()
+		succ = false
+	}
+	return
+}

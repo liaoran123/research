@@ -1,0 +1,54 @@
+//小白数据库
+//表信息
+package xbdb
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+)
+
+type XB struct {
+	Db *leveldb.DB
+}
+
+//iter的所有动作
+var (
+	bpos map[bool]func(iter iterator.Iterator) bool //起始位置。升序，first；降序，last
+	move map[bool]func(iter iterator.Iterator) bool //移动netx, prev
+)
+
+func NewXB(path string) *XB { //*leveldb.DB {
+	db, err := leveldb.OpenFile(path, nil) //"path/to/db"
+	if err != nil {
+		fmt.Println(err)
+		log.Fatal(err)
+	}
+	bpos = make(map[bool]func(iter iterator.Iterator) bool)
+	bpos[true] = first
+	bpos[false] = last
+	move = make(map[bool]func(iter iterator.Iterator) bool)
+	move[true] = next
+	move[false] = prev
+
+	return &XB{Db: db}
+}
+
+func first(iter iterator.Iterator) bool {
+	//fmt.Println("First")
+	return iter.First()
+}
+func last(iter iterator.Iterator) bool {
+	//fmt.Println("Last")
+	return iter.Last()
+}
+func prev(iter iterator.Iterator) bool {
+	//fmt.Println("Prev")
+	return iter.Prev()
+}
+func next(iter iterator.Iterator) bool {
+	//fmt.Println("Next")
+	return iter.Next()
+}

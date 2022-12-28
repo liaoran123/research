@@ -1,0 +1,54 @@
+package routers
+
+import (
+	"fmt"
+	"research/xbdb"
+)
+
+//创建目录表
+func createca(tbifo *xbdb.TableInfo) {
+	name := "ca"                                          //目录表
+	fields := []string{"id", "title", "fid", "isleaf"}    //字段，编码，标题，父id，是否叶子目录。1是0否。
+	fieldType := []string{"int", "string", "int", "bool"} //字段
+	idxs := []string{"2"}                                 //索引字段,fields的下标对应的字段
+	fullText := []string{}                                //考据级全文搜索索引字段的下标。
+	ftlen := "7"                                          //全文搜索的长度，中文默认是7
+	r := tbifo.Create(name, ftlen, fields, fieldType, idxs, fullText)
+	fmt.Printf("r: %v\n", r)
+}
+
+//创建文章表
+func createart(tbifo *xbdb.TableInfo) {
+	name := "art"                                                     //目录表
+	fields := []string{"id", "title", "fid", "split", "url"}          //字段，编码，标题，目录/父id，割截内容符号，网址
+	fieldType := []string{"int", "string", "int", "string", "string"} //字段
+	idxs := []string{"2"}                                             //索引字段,fields的下标对应的字段
+	fullText := []string{}                                            //考据级全文搜索索引字段的下标。
+	ftlen := "7"                                                      //全文搜索的长度，中文默认是7
+	r := tbifo.Create(name, ftlen, fields, fieldType, idxs, fullText)
+	fmt.Printf("r: %v\n", r)
+}
+
+//创建文章内容表，该表是全文搜索，故而名称尽量短，可以减少文件大小。
+func createc(tbifo *xbdb.TableInfo) {
+	name := "c"                             //目录表，
+	fields := []string{"id", "s"}           //字段 该id:=art.id,secid为字符串。s 是文章的分段内容
+	fieldType := []string{"string", "text"} //字段
+	idxs := []string{}                      //索引字段,fields的下标对应的字段
+	fullText := []string{"1"}               //考据级全文搜索索引字段的下标。
+	ftlen := "7"                            //全文搜索的长度，中文默认是7
+	r := tbifo.Create(name, ftlen, fields, fieldType, idxs, fullText)
+	fmt.Printf("r: %v\n", r)
+}
+
+//创建数据库表
+func Createtables() {
+	tbifo := xbdb.NewTableInfo(DbCon.Getartdb().Db)
+	createca(tbifo)
+	createart(tbifo)
+	createc(tbifo)
+	for _, v := range DbCon.FulltextIdx { //索引分库
+		tbifo = xbdb.NewTableInfo(v.Db)
+		createc(tbifo)
+	}
+}

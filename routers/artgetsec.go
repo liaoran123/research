@@ -1,29 +1,28 @@
 package routers
 
 import (
-	"encoding/json"
 	"net/http"
-	"research/base"
+	"research/xbdb"
 	"strconv"
 )
 
 //获取文章一段落内容
 func artgetsec(w http.ResponseWriter, req *http.Request) {
+	const (
+		tbname   = "c"
+		idxfield = "id"
+	)
 	params := getparas(req)
 	id := params["id"]
 	secid := params["secid"]
+	//文章id+句子段落id
 	iid, _ := strconv.Atoi(id)
-	isecid, _ := strconv.Atoi(secid)
-	r := base.Pcontent.GetOneSec(iid, isecid)
-	st := sectext{}
-	if r != nil {
-		st.Text = string(r)
-		//st.Text = strings.Replace(st.Text, "﹣", "-", -1) //text = strings.Replace(text, "-", "﹣", -1) //-是系统保留字，需要转义为﹣。
-	} else {
-		st.Text = "【已结束】"
-	}
-
-	json.NewEncoder(w).Encode(st)
+	bid := xbdb.IntToBytes(iid) //必须这样转换，否则排序不正确
+	aid := string(bid) + "+"
+	iid, _ = strconv.Atoi(secid)
+	bid = xbdb.IntToBytes(iid)
+	aid += string(bid) //+ "+"
+	getonerecord(tbname, idxfield, id, w)
 }
 
 type sectext struct {

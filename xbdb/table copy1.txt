@@ -1,0 +1,194 @@
+//小白数据库
+//表信息
+package xbdb
+
+import (
+	"bytes"
+	"strconv"
+
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
+)
+
+//表的类
+type Table struct {
+	Name string
+	Ifo  *TableInfo
+}
+
+func NewTable(xb *leveldb.DB, name string) *Table {
+	return &Table{
+		Name: name,
+		Ifo:  NewTableInfo(xb).Open(name),
+	}
+}
+
+//添加数据，默认数据与字段一一对应。
+func (t *Table) Insert(vals [][]byte) (r ReInfo) {
+	if len(vals) != len(t.Ifo.Fields) {
+		r.Info = "字段参数长短不匹配！"
+		return
+	}
+	prefix := t.Ifo.Name + Split
+	r = t.put(JoinBytes([]byte(prefix), vals[0]), bytes.Join(vals[1:], []byte(Split)))
+	if !r.Succ {
+		return
+	}
+	//添加表索引
+	idxprefix := ""
+	idx := -1
+	for _, i := range t.Ifo.Idxs {
+		idx, _ = strconv.Atoi(i)
+		idxprefix = t.Ifo.Name + "," + t.Ifo.Fields[idx] + Split
+		r = t.put(JoinBytes([]byte(idxprefix), vals[idx], []byte(Split), vals[0]), []byte{}) //vals[0]=主键
+		if !r.Succ {
+			return
+		}
+	}
+	r.Succ = true
+	r.Info = "添加成功！"
+	return
+}
+func (t *Table) put(k, v []byte) (r ReInfo) {
+	err = t.Ifo.Xb.Put(k, v, nil) //vals[0]=主键
+	if err != nil {
+		r.Succ = false
+		r.Info = err.Error()
+		return
+	}
+	r.Succ = true
+	r.Info = "put成功！"
+	return
+}
+
+/*
+//将Fields数据转换为对应的[]byte数据数组
+func (t *Table) TypeChByte() (r [][]byte) {
+	for i, v := range t.Ifo.Fields {
+		switch t.Ifo.FieldType[i] {
+		case "int":
+			iv, _ := strconv.Atoi(v)
+			r = append(r, IntToBytes(iv))
+		case "int64":
+			iv, _ := strconv.Atoi(v)
+			r = append(r, Int64ToBytes(int64(iv)))
+		default:
+			r = append(r, []byte(v))
+		}
+	}
+	return
+}
+*/
+//按前缀删除数据
+func (t *Table) delPFX(tbpfx []byte) (r ReInfo) {
+	iter := t.Ifo.Xb.NewIterator(util.BytesPrefix(tbpfx), nil)
+	for iter.Next() {
+		err = t.Ifo.Xb.Delete(iter.Key(), nil)
+		if err != nil {
+			r.Info = err.Error()
+			r.Succ = false
+			break
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		r.Info = err.Error()
+		r.Succ = false
+	} else {
+		r.Info = "删除成功！"
+		r.Succ = true
+	}
+	return
+}
+
+/*
+ca-1 乾隆大藏经-0-0
+ca-2 金刚经-1-0
+ca-3 六祖坛经-1-0
+ca-4 机缘品-3-1
+ca-5 般若品-3-1
+//根据主键pk删除表的一条数据。key=ca-2
+*/
+func (t *Table) DelPK(pk []byte) (r ReInfo) {
+	tbpfx := t.Ifo.Name + Split
+	bpfx := JoinBytes([]byte(tbpfx), pk) //key=ca-2
+	r = t.delPFX(bpfx)
+	return
+}
+
+/*
+//删除子索引
+key=
+ca,fid-2-1
+ca,fid-2-5
+ca,fid-2-6
+*/
+//根据删除一个索引的所有数据.key=ca,fid-2
+func (t *Table) DelIDX(idxfield, idxvalue string) (r ReInfo) {
+	bpfx := t.Ifo.Name + "," + idxfield + Split + idxvalue + Split
+	r = t.delPFX([]byte(bpfx))
+	return
+}
+
+/*
+key=
+ca,fid-2-1
+ca,fid-2-5
+ca,fid-2-6
+
+根据删除一个索引的一个数据.key=ca,fid-2-1
+*/
+func (t *Table) DelIDXPK(idxfield, idxvalue, pkvalues string) (r ReInfo) {
+	bpfx := t.Ifo.Name + "," + idxfield + Split + idxvalue + Split + pkvalues
+	r = t.delPFX([]byte(bpfx))
+	return
+}
+
+//删除整个表
+func (t *Table) Delete() (r ReInfo) {
+	bpfx := t.Ifo.Name
+	r = t.delPFX([]byte(bpfx))
+	return
+}
+
+/*
+//删除子索引
+key=
+ca,fid-2-1
+ca,fid-2-5
+ca,fid-2-6
+
+func (t *Table) DelChildIdx(idxfieldname, idxvalue string) (r ReInfo) { //idx string，数组下标
+	tbpfx := t.Ifo.Name + "," + idxfieldname + Split + idxvalue + Split //key=ca,fid-2-...
+	iter := t.Ifo.Xb.NewIterator(util.BytesPrefix([]byte(tbpfx)), nil)
+	for iter.Next() {
+		err = t.Ifo.Xb.Delete(iter.Key(), nil) //删除父索引
+		if err != nil {
+			r.Info = "删除错误:" + err.Error()
+			return
+		}
+	}
+	r.Info = "删除成功！"
+	r.Succ = true
+	return
+}
+
+//删除一个索引
+func (t *Table) DelIdx(pkvalue, idxfieldname, idxvalue string, order bool) (r ReInfo) { //idx string，数组下标
+	tbpfx := ""
+	if order {
+		tbpfx = t.Ifo.Name + "," + idxfieldname + Split + idxvalue + Split + pkvalue //key=ca,fid-2-5
+	} else {
+		tbpfx = t.Ifo.Name + "," + idxfieldname + Split + pkvalue + Split + idxvalue //key=ca,fid-5-2
+	}
+	err = t.Ifo.Xb.Delete([]byte(tbpfx), nil)
+	if err != nil {
+		r.Info = "删除错误:" + err.Error()
+		return
+	}
+	r.Info = "删除成功！"
+	r.Succ = true
+	return
+}
+*/

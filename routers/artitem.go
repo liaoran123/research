@@ -1,9 +1,7 @@
 package routers
 
 import (
-	"encoding/json"
 	"net/http"
-	"research/base"
 	"research/gstr"
 	"research/pubgo"
 	"strconv"
@@ -14,17 +12,31 @@ func Artitem(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	pubgo.Tj.Brows(gstr.Mstr(req.URL.Path, "/", "/"))
-
+	const (
+		tbname   = "art"
+		idxfield = "fid"
+	)
 	params := getparas(req)
 
-	id := params["id"]
-	iid, _ := strconv.Atoi(id)
-	count := params["count"]
-	icount, _ := strconv.Atoi(count)
-	p := params["p"] //当前页
-
-	//art := base.NewArticle()
-	r := base.PArticle.GetCataArt(iid, icount, p)
-	json.NewEncoder(w).Encode(r)
+	idxvalue := Table[string(tbname)].Ifo.FieldChByte(idxfield, params["id"])
+	count := -1
+	if params["count"] != "" {
+		count, _ = strconv.Atoi(params["count"])
+	}
+	b := 0
+	if params["b"] != "" {
+		b, _ = strconv.Atoi(params["b"])
+	}
+	tbd := Table[string(tbname)].Select.WhereIdx([]byte(idxfield), idxvalue, b, count)
+	if tbd == nil {
+		return
+	}
+	r := DataToJson(tbd, Table[string(tbname)].Ifo)
+	if r != nil {
+		w.Write(r.Bytes())
+		//w.Write([]byte(strconv.Quote(r.String()))) //必须使用strconv.Quote转义
+		r.Reset()
+		bufpool.Put(r)
+	}
 
 }

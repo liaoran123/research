@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"research/base"
+
 	"research/pubgo"
 	"research/routers"
 )
@@ -13,26 +13,14 @@ import (
 //读取配置文件装入map
 func readconfig() {
 	path := pubgo.GetCurrentAbPath()
-	text, _ := ioutil.ReadFile(path + "config.json")
-	pubgo.ConfigMap = make(map[string]interface{})
-	json.Unmarshal(text, &pubgo.ConfigMap)
-
-	text, _ = ioutil.ReadFile(path + "base/config.json")
-	base.ConfigMap = make(map[string]interface{})
-	json.Unmarshal(text, &base.ConfigMap)
+	text, _ := ioutil.ReadFile(path + "routers/config.json")
+	routers.ConfigMap = make(map[string]interface{})
+	json.Unmarshal(text, &routers.ConfigMap)
 }
 
 //初始化全局数据、变量
 func ini() {
-	base.Con = base.NewConnect()
-	base.CRAMs = base.NewCataRAMs()
-	base.CRAMs.LoadCataRAM() //加载目录入内存
-
-	base.Pcontent = base.Newcontent()
-	base.Pcata = base.Newcata()
-	base.PArticle = base.NewArticle()
-	base.PSe = base.NewSe()
-
+	routers.Ini()
 	pubgo.Tj = pubgo.Newtongji() //统计
 }
 
@@ -54,7 +42,8 @@ func addrouters() {
 
 //运行服务
 func run() {
-	port := pubgo.ConfigMap["port"].(string) //从配置文件获取port
+	fmt.Println("ReSearch服务器程序启动!")
+	port := routers.ConfigMap["port"].(string) //从配置文件获取port
 	err := http.ListenAndServe(":"+port, nil)
 	//log.Fatal(err)
 	if err != nil {

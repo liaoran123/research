@@ -36,35 +36,38 @@
                         var id = ""
                         var para = window.location.href.split("?")//[0].split("=")[1]            
                         if (para.length > 1) {
-                            para=para[1].split("=")                            
+                            para = para[1].split("=")
                             id = para[1]
                             id = id.split("#")[0]
                         }
-                        if (para[0]=="id"){ //url参数传入的是id
+                        if (para[0] == "id") { //url参数传入的是id
                             $("#artid").val(id)
                             getartinfo()
                         }
-                        if (para[0]=="fid"){//url参数传入的是fid
+                        if (para[0] == "fid") {//url参数传入的是fid
                             $("#fid").val(id)
-                        }                                           
+                        }
                     }
-                    function getartinfo(){                        
+                    function getartinfo() {
                         $.ajax({
-                        url: "/api/art/",
-                        dataType: "json",
-                        type: "get",
-                        data: {
-                            id: $("#artid").val()
-                        },
-                        success: function (result) {
-                            console.log(result)
-                            $("#title").val(result.title)
-                            $("#text").val(result.text)
-                            $("#split").val(result.split)
-                            $("#fid").val(result.fid)
-                            $("#url").val(result.url)
-                           }
-                    });
+                            url: "/api/art/",
+                            dataType: "json",
+                            type: "get",
+                            data: {
+                                id: $("#artid").val()
+                            },
+                            success: function (result) {
+                                console.log(result)
+                                $("#title").val(result[0].title)
+                                $("#text").val(result[0].text)
+                                $("#split").val(result[0].split)
+                                $("#fid").val(result[0].fid)
+                                $("#url").val(result[0].url)
+                            },
+                            error: function (xhr) {
+                                alert("错误提示： " + xhr.status + " " + xhr.statusText);
+                            }
+                        });
                     }
                 </script>
                 <div class="input-group">
@@ -91,9 +94,9 @@
                 </div>
                 <div class="input-group">
                     <span class="input-group-addon">所属目录id</span>
-                    <input id="fid" type="text" class="form-control" aria-describedby="basic-addon1" value="">                   
+                    <input id="fid" type="text" class="form-control" aria-describedby="basic-addon1" value="">
                 </div>
-                
+
                 <div class="input-group">
                     <span class="input-group-addon">管理员密码</span>
                     <input id="psw" type="text" class="form-control" aria-describedby="basic-addon1">
@@ -107,37 +110,37 @@
                     </button>
                 </div>
                 <script>
-                    $("#addart").click(function () {
-                        ititle = $("#title").val();
-                        itext = $("#text").val();
-                        isplit = $("#split").val();
-                        if (itext == "" || itext == "") {
-                            alert("标题和内容不能为空。")
-                            return
-                        }
-                        iurl = $("#url").val();
-                        ifid = $("#fid").val().trim();
-                        if (ifid == "") {
-                            ifid = "0"
-                        }
-                        ipsw = $("#psw").val();
-                        $.post("/api/art/",
-                            {
-                                title: ititle,
-                                text: itext,
-                                url: iurl,
-                                split: isplit,
-                                fid: ifid,
-                                psw: ipsw
-                            },
-                            function (result) {
-                                console.log(result)
-                                if (result.Succ == true) {
-                                    alert("添加成功。")
-                                    //location.reload();
-                                }
-                            }, "json");
-                    });
+                        $("#addart").click(function () {
+                            ititle = $("#title").val();
+                            itext = $("#text").val();
+                            isplit = $("#split").val();
+                            if (itext == "" || itext == "") {
+                                alert("标题和内容不能为空。")
+                                return
+                            }
+                            iurl = $("#url").val();
+                            ifid = $("#fid").val().trim();
+                            if (ifid == "") {
+                                ifid = "0"
+                            }
+                            ipsw = $("#psw").val();
+                            $.post("/api/art/",
+                                {
+                                    title: ititle,
+                                    text: itext,
+                                    url: iurl,
+                                    split: isplit,
+                                    fid: ifid,
+                                    psw: ipsw
+                                },
+                                function (result) {
+                                    console.log(result)
+                                    if (result.Succ == true) {
+                                        alert("添加成功。")
+                                        //location.reload();
+                                    }
+                                }, "json");
+                        });
 
                 </script>
                 <div class="btn-group">
@@ -146,7 +149,7 @@
                         修改文章
                     </button>
                     <script>
-                        $("#putart").click(function () {                            
+                        $("#putart").click(function () {
                             id = $("#artid").val()
                             if (id == "") {
                                 alert("请输入文章的id")
@@ -158,7 +161,7 @@
                                 return
                             }
                             title = $("#title").val();
-                            text = $("#text").val();                            
+                            text = $("#text").val();
                             if (text == "" || text == "") {
                                 alert("标题和内容不能为空。")
                                 return
@@ -168,7 +171,7 @@
                             fid = $("#fid").val().trim();
                             if (fid == "") {
                                 fid = "0"
-                            }                            
+                            }
                             $.ajax({
                                 url: "/api/art/",
                                 dataType: "json",
@@ -176,17 +179,17 @@
                                 data: {
                                     id: id,
                                     psw: psw,
-                                    title:title,
-                                    text:text,
-                                    split:split,
-                                    url:url,
-                                    fid:fid
+                                    title: title,
+                                    text: text,
+                                    split: split,
+                                    url: url,
+                                    fid: fid
                                 },
                                 success: function (result) {
                                     console.log(result)
                                     if (result.Succ == true) {
                                         alert("修改成功。")
-                                        location.reload();
+                                        //location.reload();
                                     }
                                 }
                             });
@@ -200,34 +203,34 @@
                         删除文章
                     </button>
                     <script>
-                        $("#delart").click(function () {
-                            id = $("#artid").val()
-                            if (id == "") {
-                                alert("请输入文章的id")
-                                return
-                            }
-                            psw = $("#psw").val();
-                            if (psw == "") {
-                                alert("请输入密码。")
-                                return
-                            }
-                            $.ajax({
-                                url: "/api/art/",
-                                dataType: "json",
-                                type: "DELETE",
-                                data: {
-                                    id: id,
-                                    psw: psw
-                                },
-                                success: function (result) {
-                                    console.log(result)
-                                    if (result.Succ == true) {
-                                        alert("删除成功。")
-                                        location.reload();
-                                    }
+                            $("#delart").click(function () {
+                                id = $("#artid").val()
+                                if (id == "") {
+                                    alert("请输入文章的id")
+                                    return
                                 }
-                            });
-                        })
+                                psw = $("#psw").val();
+                                if (psw == "") {
+                                    alert("请输入密码。")
+                                    return
+                                }
+                                $.ajax({
+                                    url: "/api/art/",
+                                    dataType: "json",
+                                    type: "DELETE",
+                                    data: {
+                                        id: id,
+                                        psw: psw
+                                    },
+                                    success: function (result) {
+                                        console.log(result)
+                                        if (result.Succ == true) {
+                                            alert("删除成功。")
+                                            location.reload();
+                                        }
+                                    }
+                                });
+                            })
                     </script>
                 </div>
 

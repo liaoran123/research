@@ -1,0 +1,89 @@
+//小白数据库
+//表信息
+package xbdb
+
+import (
+	"bytes"
+	"strconv"
+)
+
+//添加数据，默认数据与字段一一对应。
+func (t *Table) Insert(vals [][]byte) (r ReInfo) {
+	if len(vals) != len(t.Ifo.Fields) {
+		r.Info = "字段参数长短不匹配！"
+		return
+	}
+	r = t.InsPK(vals)
+	if !r.Succ {
+		return
+	}
+	//添加表索引
+	idx := -1
+	for _, i := range t.Ifo.Idxs {
+		idx, _ = strconv.Atoi(i)
+
+		r = t.InsIDX([]byte(t.Ifo.Fields[idx]), vals[idx], vals[0])
+		if !r.Succ {
+			return
+
+		}
+	}
+	//添加表全文索引
+	ftlen, _ := strconv.Atoi(t.Ifo.FTLen)
+	var ftIdx []string
+	for _, i := range t.Ifo.FullText {
+		if i == "" {
+			continue
+		}
+		idx, _ = strconv.Atoi(i)
+		ftIdx = t.ForDisparte(string(vals[idx]), ftlen)
+		for _, f := range ftIdx {
+			t.InsIDX([]byte(t.Ifo.Fields[idx]), []byte(f), vals[0])
+			if !r.Succ {
+				return
+			}
+		}
+	}
+	r.Succ = true
+	r.Info = "添加成功！"
+	return
+}
+
+//添加主键数据，即添加一条记录。
+func (t *Table) InsPK(vals [][]byte) (r ReInfo) {
+	//prefix := t.Ifo.Name + Split
+	//ca-7 禅定品-3-1
+	//k=ca-7 v=禅定品-3-1
+	key := t.Ifo.getPkKey(vals[0])
+	r = t.put(key /*JoinBytes([]byte(prefix), vals[0])*/, bytes.Join(vals[1:], []byte(Split)))
+	if !r.Succ {
+		return
+	}
+	return
+}
+
+//添加一条索引数据。
+func (t *Table) InsIDX(idxfield, idxvalue, pkvalue []byte) (r ReInfo) {
+	//bySplit := []byte(Split)
+	//k=ca,fid-3-7 v=
+	//prefix := JoinBytes([]byte(t.Ifo.Name+","), idxFieldname, bySplit, idxFieldvalue, bySplit, PKvalue)
+	key := t.Ifo.getIdxPfxKey(idxfield, idxvalue, pkvalue)
+	r = t.put(key /*[]byte(prefix)*/, []byte{}) //vals[0]=主键
+	if !r.Succ {
+		return
+	}
+	return
+}
+
+//添加一个kv
+func (t *Table) put(k, v []byte) (r ReInfo) {
+	err = t.Ifo.Xb.Put(k, v, nil) //vals[0]=主键
+	if err != nil {
+		r.Succ = false
+		r.Info = err.Error()
+		return
+	}
+	r.Succ = true
+	r.Info = "put成功！"
+	return
+}

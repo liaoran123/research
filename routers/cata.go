@@ -23,7 +23,7 @@ func Cata(w http.ResponseWriter, req *http.Request) {
 		catamethod["POST"] = catapost     //添加
 		catamethod["GET"] = cataget       //查询
 		catamethod["DELETE"] = catadelete //删除
-		catamethod["PUT"] = cataput       //修改
+		catamethod["PUT"] = catapost      //cataput       //修改
 	}
 	if f, ok := catamethod[req.Method]; ok {
 		f(w, req)

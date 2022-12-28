@@ -24,7 +24,7 @@
             </div>
             <div class="panel-heading">
                 <a id="fcata" class="label label-primary" href="#">返回上级目录</a>
-                <h2 id="fidname">name</h2>
+                <h2 id="fidname"></h2>
                 <p id="cataohter">
                     <a id="addarturl" class="label label-primary" href="#">在该目录下添加文章</a>
                   <br>
@@ -58,7 +58,7 @@
                         $("#cataohter").hide()
                     }
                     $("#addarturl").attr("href", "/admin/art/?fid=" + fid)
-                    $("#cataart").attr("href", "/api/artitem/?id=" + fid+"&count=21")
+                    $("#cataart").attr("href", "/api/art/item/?id=" + fid+"&count=21")
 
                     //***********打开目录等于url的id参数的所有子目录**************
                     $.ajax({
@@ -70,7 +70,7 @@
                         },
                         success: function (result) {
                             console.log(result)
-                            // $("#fidname").html(result.name) //result.name目录名称
+                            // $("#fidname").html(result.title) //result.name目录名称
                             // $("#fcata").attr("href", "/admin/cata/?id=" + result.fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。
                             var chtml = ""
                             /*result.Catainfo，子目录信息数组
@@ -88,7 +88,7 @@
                                 if (element.title == "") {//title==""，逻辑上删除的目录。目录不会物理删除。
                                     continue
                                 }
-                                chtml += '<div class="panel-heading"><a href="?id=' + element.id + '"><b>' + element.title + '</b></a> <a href="#insert" data-id="' + element.id + '" data-fid="' + element.fid + '" data-name="' + element.title + '" onclick="tianchong(this)"><span  class="label label-default">填充输入框</span></a></div>'
+                                chtml += '<div class="panel-heading"><a href="?id=' + element.id + '"><b>' + element.title + '</b></a> <a href="#insert" data-id="' + element.id + '" data-fid="' + element.fid + '" data-name="' + element.title +  '" data-isleaf="' + element.isleaf + '" onclick="tianchong(this)"><span  class="label label-default">填充输入框</span></a></div>'
                             }
                             $("#catas").html(chtml)
 
@@ -105,10 +105,11 @@
                         data: {
                             id: $("#fid").val()
                         },
-                        success: function (result) {
+                        success: function (result) {                            
                             console.log(result)
-                            $("#fidname").html(result.title) //result.name目录名称
-                            $("#fcata").attr("href", "/admin/cata/?id=" + result.fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。                           
+                            //console.log(result[0].title)
+                            $("#fidname").html(result[0].title) //result.name目录名称                            
+                            $("#fcata").attr("href", "/admin/cata/?id=" + result[0].fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。                           
                         }
                     });
                 }
@@ -117,6 +118,7 @@
                     $("#caid").val($(obj).attr("data-id"))
                     $("#fid").val($(obj).attr("data-fid"))
                     $("#name").val($(obj).attr("data-name"))
+                    $("#isleaf").val($(obj).attr("data-isleaf"))
                 }
             </script>
 
@@ -139,6 +141,11 @@
                     <p class="label label-default">0，表示顶级目录</p>
                 </div>
                 <div class="input-group">
+                    <span class="input-group-addon">叶子目录</span>
+                    <input id="isleaf" type="text" class="form-control" value="0">
+                   
+                </div>
+                <div class="input-group">
                     <span class="input-group-addon">管理员密码</span>
                     <input id="psw" type="text" class="form-control" aria-describedby="basic-addon1">
                 </div>
@@ -150,33 +157,40 @@
                     </button>
                     <script>
                         $("#post").click(function () {
-                            ititle = $("#name").val().trim()
-                            //ititle = $.trim(ititle)
-                            ifid = $("#fid").val();
-                            ipsw = $("#psw").val();
-                            if (ititle == "") {
+                            InsOrUpd("ins")
+                        });
+                        function InsOrUpd(iou) {
+                            title = $("#name").val().trim()
+                            if (title == "") {
                                 alert("请输入标题。")
                                 return
                             }
-                            if (ipsw == "") {
+                            psw = $("#psw").val();
+                            if (psw == "") {
                                 alert("请输入密码。")
                                 return
                             }
+                            caid = $("#caid").val()
+                            fid = $("#fid").val();                            
+                            isleaf= $("#isleaf").val();                            
+                            
                             $.post("/api/cata/",
                                 {
-                                    title: ititle,
-                                    fid: ifid,
-                                    psw: ipsw
+                                    id:caid,
+                                    title: title,
+                                    fid: fid,                                   
+                                    isleaf:isleaf,
+                                    psw: psw,
+                                    iou:iou
                                 },
                                 function (result) {
                                     console.log(result)
                                     if (result.Succ == true) {
-                                        alert("添加成功。")
-                                        location.reload();
+                                        alert("成功!")
+                                       location.reload();
                                     }
                                 }, "json");
-                        });
-
+                        }
                     </script>
                 </div>
 
@@ -186,40 +200,7 @@
                     </button>
                     <script>
                         $("#PUT").click(function () {
-                            id = $("#caid").val()
-                            if (caid == "") {
-                                alert("请先点击要修改的目录右边【填充输入框】，获取目录id")
-                                return
-                            }
-                            fid = $("#fid").val();
-                            psw = $("#psw").val();
-                            name = $("#name").val().trim()
-                            if (name == "") {
-                                alert("请输入标题。")
-                                return
-                            }
-                            if (psw == "") {
-                                alert("请输入密码。")
-                                return
-                            }
-                            $.ajax({
-                                url: "/api/cata/",
-                                dataType: "json",
-                                type: "put",
-                                data: {
-                                    id: id,
-                                    fid: fid,
-                                    name: name,
-                                    psw: psw
-                                },
-                                success: function (result) {
-                                    console.log(result)
-                                    if (result.Succ == true) {
-                                        alert("修改成功。")
-                                        location.reload();
-                                    }
-                                }
-                            });
+                            InsOrUpd("upd")
                         });
 
                     </script>

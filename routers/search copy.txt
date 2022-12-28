@@ -1,0 +1,53 @@
+package routers
+
+import (
+	"bytes"
+	"fmt"
+	"net/http"
+	"research/xbdb"
+)
+
+func Search(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*") //同源策略，不加客户端调用不了。
+	w.Header().Set("Content-Type", "application/json")
+
+	params := getparas(req)
+	tbname := "c"
+	exefunc := NewExefunc(21)
+	asc := params["asc"] == "" //params["asc"]默认空值即true
+	p := params["p"]
+	ok := false
+	key := Table[tbname].Select.GetIdxPrefixLike([]byte("s"), []byte(params["kw"]))
+	iter := Table[tbname].Select.IterPrefix(key)
+	if iter == nil {
+		return
+	}
+	if p == "" {
+		ok = iter.Seek(key)
+	} else {
+		ok = iter.Seek([]byte(p))
+	}
+	xbdb.NewIters(iter, ok, asc, 0, -1).ForDataFun(exefunc.search)
+	w.Write(exefunc.r.Bytes())
+	exefunc.r.Reset()
+	bufpool.Put(exefunc.r)
+}
+
+//搜索执行类
+type Exefunc struct {
+	count int //返回条数
+	loop  int
+	r     *bytes.Buffer
+}
+
+func NewExefunc(count int) *Exefunc {
+	return &Exefunc{
+		count: count,
+		r:     bufpool.Get().(*bytes.Buffer),
+	}
+}
+func (e *Exefunc) search(k, v []byte) bool {
+	fmt.Println(string(k), string(v))
+	e.loop++
+	return e.loop < e.count
+}

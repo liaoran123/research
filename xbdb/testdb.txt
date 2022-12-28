@@ -1,0 +1,75 @@
+//小白数据库
+//创建表
+package xbdb
+
+import (
+	"fmt"
+)
+
+func Testdb(xb *XB) {
+	tbifo := NewTableInfo(xb.Db)
+	var name, ftlen string
+	var fields, fieldType, idxs, fullText []string
+	var r ReInfo
+	var tbif *TableInfo
+
+	//创建目录表
+	name = "ca"                                          //目录表
+	fields = []string{"id", "title", "fid", "isleaf"}    //字段，编码，标题，父id，是否叶子目录。1是0否。
+	fieldType = []string{"int", "string", "int", "bool"} //字段
+	idxs = []string{"2", "1,2"}                          //索引字段,fields的下标对应的字段。支持组合索引，用,分隔
+	fullText = []string{"1"}                             //考据级全文搜索索引字段的下标。
+	ftlen = "7"                                          //全文搜索的长度，中文默认是7
+	r = tbifo.Create(name, ftlen, fields, fieldType, idxs, fullText)
+	fmt.Printf("r: %v\n", r)
+
+	tbif = tbifo.Open(name)
+	fmt.Printf("r1: %v\n", tbif)
+	//r = tbifo.Del("ca")
+	//fmt.Printf("r: %v\n", r)
+
+	//添加数据
+	catb := NewTable(nil, "ca") //XXXXXXXXXXXXXXXXXX
+	var vals [][]byte
+	vals = append(vals, []byte("1"))
+	vals = append(vals, []byte("乾隆大藏经"))
+	vals = append(vals, []byte("0"))
+	vals = append(vals, []byte("0"))
+	r = catb.Insert(vals)
+
+	vals = vals[:0]
+	vals = append(vals, []byte("2"))
+	vals = append(vals, []byte("金刚经"))
+	vals = append(vals, []byte("1"))
+	vals = append(vals, []byte("0"))
+	r = catb.Insert(vals)
+
+	vals = vals[:0]
+	vals = append(vals, []byte("3"))
+	vals = append(vals, []byte("六祖坛经"))
+	vals = append(vals, []byte("1"))
+	vals = append(vals, []byte("0"))
+	r = catb.Insert(vals)
+	fmt.Printf("r: %v\n", r)
+
+	vals = vals[:0]
+	vals = append(vals, []byte("4"))
+	vals = append(vals, []byte("六祖"+Split+"坛经"))
+	vals = append(vals, []byte("1"))
+	vals = append(vals, []byte("0"))
+	r = catb.Insert(vals)
+	fmt.Printf("r: %v\n", r)
+	/*
+		vals = vals[:0]
+		vals = append(vals, []byte("4"))
+		vals = append(vals, []byte("六祖与坛经"))
+		vals = append(vals, []byte("10"))
+		vals = append(vals, []byte("20"))
+		catb.Updata(vals)
+	*/
+	//r = catb.Delete([]byte("3"))
+	fmt.Printf("r: %v\n", r)
+	//catb.DelAll()
+	//catb.Ifo.Del("ca")
+
+}

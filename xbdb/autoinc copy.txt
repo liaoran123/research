@@ -1,0 +1,42 @@
+package xbdb
+
+import (
+	"bytes"
+	"strconv"
+)
+
+//自动增值
+type Autoinc struct {
+	tbn string
+	id  int
+	//mu sync.RWMutex
+}
+
+func NewAutoinc(tbn string, xb *XB) *Autoinc {
+	var id int
+	var key []byte
+	//查询该表最大值+1，为当前自动增值的值。
+	iter := xb.Prefix([]byte(tbn + Split))
+	if iter.Last() {
+		key = iter.Key()
+		key = bytes.Split(key, []byte(Split))[1]
+		id = BytesToInt(key)
+	}
+	iter.Release()
+	id = id + 1
+	return &Autoinc{
+		id:  id,
+		tbn: tbn,
+	}
+}
+
+func (a *Autoinc) Getid() int {
+	//a.mu.Lock() //由于leveldb是单线程，故不在这里加锁
+	//defer a.mu.Unlock()
+	id := a.id
+	a.id++
+	return id
+}
+func (a *Autoinc) GetidStr() string {
+	return strconv.Itoa(a.Getid())
+}

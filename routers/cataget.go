@@ -1,11 +1,8 @@
 package routers
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
-
-	"research/base"
 )
 
 var catamap map[string]func(string, http.ResponseWriter)
@@ -29,21 +26,39 @@ func cataget(w http.ResponseWriter, req *http.Request) {
 
 //返回一目录信息
 func getcatainfo(id string, w http.ResponseWriter) {
-	iid, _ := strconv.Atoi(id)
-	r := base.Pcata.GetCata(iid)
-	json.NewEncoder(w).Encode(r)
+	const (
+		tbname   = "ca"
+		idxfield = "id"
+	)
+	getonerecord(tbname, idxfield, id, w)
 }
 
 //返回所有子目录信息
 func getChildCatas(id string, w http.ResponseWriter) {
-	ifid, _ := strconv.Atoi(id)
-	r := base.Pcata.ChildCatas(ifid)
-	json.NewEncoder(w).Encode(r)
+	const (
+		tbname   = "ca"
+		idxfield = "fid"
+	)
+	idxvalue := Table[string(tbname)].Ifo.FieldChByte(idxfield, id)
+	tbd := Table[string(tbname)].Select.WhereIdx([]byte(idxfield), idxvalue, 0, -1)
+	if tbd == nil {
+		return
+	}
+	r := DataToJson(tbd, Table[string(tbname)].Ifo)
+	if r != nil {
+		w.Write(r.Bytes())
+		//w.Write([]byte(strconv.Quote(r.String()))) //必须使用strconv.Quote转义
+		r.Reset()
+		bufpool.Put(r)
+	}
+
 }
 
 //获取目录路径
 func getCataDir(id string, w http.ResponseWriter) {
 	idir, _ := strconv.Atoi(id)
-	r := base.CRAMs.GetCataDir(idir)
-	json.NewEncoder(w).Encode(r)
+	r := CRAMs.GetCaDirToJson(idir) // .GetCataDir(idir)
+	w.Write([]byte(r))
+	//w.Write([]byte(strconv.Quote(Se.r.String()))) //必须使用strconv.Quote转义
+	//json.NewEncoder(w).Encode(r)  strconv.Unquote
 }

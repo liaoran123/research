@@ -1,33 +1,246 @@
 package routers
 
 import (
-	"encoding/json"
+	"bytes"
+	"fmt"
 	"net/http"
-	"research/base"
 	"research/pubgo"
+	"research/xbdb"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/syndtr/goleveldb/leveldb/iterator"
 )
 
 func Search(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*") //同源策略，不加客户端调用不了。
 	w.Header().Set("Content-Type", "application/json")
-	//ts := pubgo.Newts() //计算执行时间
-	pubgo.Tj.Brows("Search")
-	params := getparas(req)
-	Rmsg := NewRmsg()
 
-	kw := params["kw"]
-	p := params["p"] //当前页
-	count := params["count"]
-	caids := params["caids"] //目录id,在目录范围下搜索.支持多个，用 “|”隔开。
-	if kw == "" {
-		Rmsg.Msg = "请输入搜索词！"
-		json.NewEncoder(w).Encode(Rmsg)
+	params := getparas(req)
+	tbname := "c"
+	Se := NewSeExefunc(tbname, params["kw"], params["dir"], 21)
+	asc := params["asc"] == "" //params["asc"]默认空值即true
+	p := params["p"]
+	ok := false
+	var key []byte
+	var iter iterator.Iterator
+	if p == "" {
+		//第一页搜索没有p值，需要查询获得
+		key = Table[tbname].Select.GetIdxPrefixLike([]byte("s"), []byte(Se.mkw))
+		iter, ok = Table[tbname].Select.IterPrefixMove(key, asc)
+	} else { //整型转byte留下的复制问题
+		//《一人心念口言--14371+0--0
+		//p, _ = strconv.Unquote(p) //反转义
+		ps := strings.Split(p, xbdb.Split)
+		ips := strings.Split(ps[1], idssplit) //将14371+0转为byte的字符串
+		aid, _ := strconv.Atoi(ips[0])
+		sid, _ := strconv.Atoi(ips[1])
+		ids := ArtSecToId(aid, sid)
+		pos, _ := strconv.Atoi(ps[2])
+		key = JoinBytes([]byte(ps[0]), []byte(xbdb.Split), []byte(ids), []byte(xbdb.Split), IntToBytes(pos))
+		key = Table[tbname].Select.GetIdxPrefixLike([]byte("s"), key)
+		iter, ok = Table[tbname].Select.IterSeekMove([]byte(key))
+	}
+	if iter == nil {
 		return
 	}
-	order := params["order"]
-	r := base.PSe.Search(kw, p, count, caids, order != "1")
-	//ys := ts.Gstrts()
-	json.NewEncoder(w).Encode(r)
-	r.Reset() //置空
-	base.RsetAllPool.Put(r)
+	ts := pubgo.Newts() //计算执行时间
+	Se.r.WriteString("{\"datalist\":[")
+	xbdb.NewIters(iter, ok, asc, 0, -1).ForDataFun(Se.search)
+	jsonstr := Se.r.String()
+	jsonstr = strings.Trim(jsonstr, ",")
+	Se.r.Reset()
+	Se.r.WriteString(jsonstr)
+	Se.r.WriteString("],")
+	Se.r.WriteString("\"lastkey\":" + strconv.Quote(Se.lastkey) + ",")
+	setime := ts.Gstrts()
+	Se.r.WriteString("\"setime\":\"" + setime + "\",")
+	fmt.Printf("setime: %v\n", setime)
+	Se.r.WriteString("\"count\":" + strconv.Itoa(Se.loop) + "}")
+	w.Write(Se.r.Bytes())
+	//w.Write([]byte(strconv.Quote(Se.r.String()))) //必须使用strconv.Quote转义
+	Se.r.Reset()
+	bufpool.Put(Se.r)
+}
+
+//搜索执行类
+type SeExefunc struct {
+	tbname  string
+	kw      string
+	dir     string   //目录范围，可以是多个
+	ks      []string //用空格来判断组合查询，分解出多个词
+	mkw     string   //最长的关键词
+	count   int      //返回条数
+	mlen    int      //摘录最大长度
+	loop    int
+	r       *bytes.Buffer
+	lastkey string //最后的key值
+	//--变量---
+	//keys              [][]byte
+	artid, secid, pos int
+	cid               uint32
+	bt                time.Time
+}
+
+func NewSeExefunc(tbname, kw, dir string, count int) *SeExefunc {
+	ks := strings.Split(kw, " ") //用空格来判断组合查询
+	//获取字数最长的词，通常字数最长的就是数据量最少的词。以该词作为组合查询的遍历定位词。
+	mkw := getMaxLenKw(ks)
+	mkw = Sublen(mkw, 7) //搜索词最大长度是7
+	return &SeExefunc{
+		tbname: tbname,
+		kw:     kw,
+		dir:    dir,
+		ks:     ks,
+		mkw:    mkw,
+		count:  count,
+		mlen:   49,
+		r:      bufpool.Get().(*bytes.Buffer),
+		bt:     time.Now(),
+	}
+}
+func (e *SeExefunc) search(rd []byte) bool {
+	if time.Since(e.bt).Seconds() > 3 { //只要是控制组合查询超时时间
+		fmt.Println("组合查询超时3秒。") //多次执行由于会加载内存，则可以完成。
+		e.loop = 21              //以便用户点击下一页，分散时间进行搜索，缓解性能问题。
+		return false
+	}
+	if !strings.Contains(string(rd), e.mkw) {
+		return false //key不存在kw，即已经超过所需数据
+	}
+	//解构rd，转为字符串lastkey。参照artpost.ArtSecToId组合规则
+	keys := bytes.Split(rd, []byte(xbdb.Split))
+	artid, secid := IdToArtSec(string(keys[1]))
+	if artid == 0 {
+		return true
+	}
+	if (e.artid == artid) && (e.secid == secid) { //排除重复。同一段落包含多个相同kw时，出现重复情况。
+		return true
+	}
+	e.artid = artid
+	e.secid = secid
+	e.pos = xbdb.BytesToInt(keys[2])
+
+	e.lastkey = string(keys[0]) + xbdb.Split + strconv.Itoa(e.artid) + idssplit + strconv.Itoa(e.secid) + xbdb.Split + strconv.Itoa(e.pos)
+
+	e.cid = Artfid[uint32(e.artid)]   //获取文章对应的所属目录id
+	if !CacaRand(int(e.cid), e.dir) { //范围搜索
+		return true
+	}
+	if !e.exsit() { //组合查询
+		return true
+	}
+	e.r.WriteString("{\"dir\":" + CRAMs.GetCaDirToJson(int(e.cid)) + ",") //写入目录路径
+	e.r.WriteString(e.getartinfo() + ",")                                 //写入文章标题
+	e.r.WriteString(e.getartmeta() + "},")                                //写入文章摘录信息
+	e.loop++
+	return e.loop < e.count
+}
+
+//解构rd，转为字符串。参照artpost.ArtSecToId组合规则
+/*
+func (e *SeExefunc) RdToString(rd []byte) {
+	e.keys = bytes.Split(rd, []byte(xbdb.Split))
+	e.artid, e.secid = IdToArtSec(string(e.keys[1]))
+	e.pos = xbdb.BytesToInt(e.keys[2])
+	e.lastkey = string(e.keys[1]) + xbdb.Split + strconv.Itoa(e.artid) + "+" + strconv.Itoa(e.secid) + xbdb.Split + strconv.Itoa(e.pos)
+}
+*/
+//组合查询
+func (e *SeExefunc) exsit() (find bool) {
+	find = true
+	if len(e.ks) < 2 {
+		return
+	}
+	id := ArtSecToId(e.artid, e.secid)
+	idxvalue := Table[e.tbname].Ifo.FieldChByte("id", id)
+	btext := Table[e.tbname].Select.GetPKValue(idxvalue)
+	sec := string(btext)
+	secstr := string(sec)
+	fc := 0
+	for i := 1; i < len(e.ks); i++ { //for _, v := range e.ks { //如果在该段落内容里，所有的词组都存在，即是匹配。
+		if strings.Contains(secstr, Sublen(e.ks[i], 7)) {
+			fc++
+		}
+		//find = find && strings.Contains(secstr, Sublen(e.ks[i], 7)) //精准查询
+	}
+	if fc > len(e.ks)/2 { //存在一半即当为匹配
+		find = true
+	}
+	return
+}
+func (e *SeExefunc) getartinfo() (r string) {
+	skid := ArtSecToId(e.artid, 0) //第0句是文章标题
+	key := Table[e.tbname].Ifo.FieldChByte("id", skid)
+	value := Table[e.tbname].Select.GetPKValue(key)
+	/*
+		[{"id":2,"title":"金刚经","fid":1,"isleaf":"0"},
+		{"id":3,"title":"六祖坛经","fid":1,"isleaf":"0"}]
+	*/
+	r = "\"id\":" + strconv.Itoa(e.artid) + ","
+	r += "\"title\":" + strconv.Quote(string(value)) //+ "\""
+
+	return
+}
+
+//文章摘录
+func (e *SeExefunc) getartmeta() (r string) {
+
+	skid := ArtSecToId(e.artid, e.secid)                 //c表id的字符串
+	key := Table[e.tbname].Select.GetPkKey([]byte(skid)) //Table[e.tbname].Ifo.FieldChByte("id", skid)
+	iter, ok := Table[e.tbname].Select.IterSeekMove(key)
+	if !ok {
+		return
+	}
+	meta := ""
+	eid := e.secid
+	//var ks [][]byte
+	for len(meta) < e.mlen*3 { //每个中文3个字节
+		eid++
+		//fmt.Println(string(iter.Key()), string(iter.Value()))
+		meta += string(iter.Value())
+		//ks = bytes.Split(iter.Key(), []byte(xbdb.Split))
+		//_, eid = IdToArtSec(string(ks[1]))
+		ok = iter.Next()
+		if !ok {
+			break
+		}
+	}
+
+	/*
+		[{"id":2,"title":"金刚经","fid":1,"isleaf":"0"},
+		{"id":3,"title":"六祖坛经","fid":1,"isleaf":"0"}]
+	*/
+	r = "\"bid\":" + strconv.Itoa(e.secid) + ","
+	r += "\"eid\":" + strconv.Itoa(eid) + ","
+	r += "\"text\":" + strconv.Quote(meta) //+ "\""
+
+	return
+}
+
+/*
+// 写超时警告日志 通用方法
+
+func TimeoutWarning(tag, detailed string, start time.Time, timeLimit float64) {
+	dis := time.Now().Sub(start).Seconds()
+	if dis > timeLimit {
+		log.Warning(log.CENTER_COMMON_WARNING, tag, " detailed:", detailed, "TimeoutWarning using", dis, "s")
+		//pubstr := fmt.Sprintf("%s count %v, using %f seconds", tag, count, dis)
+		//stats.Publish(tag, pubstr)
+	}
+}
+*/
+//找出最大长度的词
+func getMaxLenKw(ks []string) (s string) {
+	l := 0
+	lv := 0
+	for _, v := range ks {
+		lv = len([]rune(v))
+		if lv >= l {
+			s = v
+			l = lv
+		}
+	}
+	return
 }

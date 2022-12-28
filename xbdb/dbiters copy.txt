@@ -1,0 +1,42 @@
+//小白数据库
+//查询
+package xbdb
+
+import "github.com/syndtr/goleveldb/leveldb/iterator"
+
+//查找模板函数类
+type Iters struct {
+	iter iterator.Iterator      //数据游标
+	ok   bool                   //游标是否结束
+	asc  bool                   //asc,升/降序
+	bint int                    //第几条开始
+	f    func(k, v []byte) bool //执行函数
+}
+
+func NewIters(iter iterator.Iterator, ok, asc bool, bint int, f func(k, v []byte) bool) *Iters {
+	return &Iters{
+		iter: iter,
+		ok:   ok,
+		asc:  asc,
+		bint: bint,
+		f:    f,
+	}
+}
+
+func (i *Iters) Find() {
+	loop := -1
+	for i.ok {
+		loop++
+		if loop < i.bint {
+			i.ok = move[i.asc](i.iter)
+			continue
+		}
+		if i.f(i.iter.Key(), i.iter.Value()) {
+			i.ok = move[i.asc](i.iter)
+		} else {
+			i.iter.Release()
+			return
+		}
+	}
+	i.iter.Release()
+}

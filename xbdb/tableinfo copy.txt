@@ -1,0 +1,116 @@
+//小白数据库
+//表信息
+package xbdb
+
+import (
+	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
+)
+
+const (
+	Split      = "-"     //字段分隔符
+	ChSplit    = "#f0"   //字段分隔符的转义码
+	IdxSplit   = "."     //索引分隔符，转义码 #f1
+	ChIdxSplit = "#f1"   //索引分隔符的转义码
+	TbInfopfx  = "tbifo" //表信息的前缀
+)
+
+//表信息的类。//默认必须第一个字段是主键id
+type TableInfo struct {
+	Xb        *leveldb.DB
+	Name      string   //表名
+	Fields    []string //字段
+	FieldType []string //字段对应的类型
+	Pk        string   //默认必须有一个自动增值的主键id
+	Idxs      []string //索引字段的下标，不使用[]int，转换byte太麻烦。
+	FullText  []string //考据级全文搜索索引字段的下标。
+	FTLen     string   //全文搜索的长度，中文默认是7
+}
+
+func NewTableInfo(xb *leveldb.DB) *TableInfo {
+	return &TableInfo{
+		Xb: xb,
+	}
+}
+
+//创建/修改一个表，默认第一个字段必须是主键
+func (t *TableInfo) Create(name, ftlen string, fields, fieldType, idxs, fullText []string) (r ReInfo) {
+	if len(fieldType) != len(fields) {
+		r.Info = "字段和类型数据不匹配！"
+		return
+	}
+	//赋值
+	t.Name = name
+	t.Pk = fields[0]
+	t.Fields = fields
+	t.FieldType = fieldType
+	t.Idxs = idxs
+	t.FullText = fullText
+	t.FTLen = ftlen
+
+	tbpfx := TbInfopfx + Split + t.Name //表信息前缀
+
+	r.Succ = t.Xb.Put([]byte(tbpfx), []byte(strings.Join(t.Fields, Split)), nil) == nil                            //添加字段信息
+	r.Succ = r.Succ && t.Xb.Put([]byte(tbpfx+IdxSplit+"ty"), []byte(strings.Join(t.FieldType, Split)), nil) == nil //添加字段类型信息
+	r.Succ = r.Succ && t.Xb.Put([]byte(tbpfx+IdxSplit+"pk"), []byte(t.Pk), nil) == nil                             //添加主键信息
+	r.Succ = r.Succ && t.Xb.Put([]byte(tbpfx+IdxSplit+"idx"), []byte(strings.Join(t.Idxs, Split)), nil) == nil     //添加索引信息
+	r.Succ = r.Succ && t.Xb.Put([]byte(tbpfx+IdxSplit+"ft"), []byte(strings.Join(t.FullText, Split)), nil) == nil  //添加索引信息
+	r.Succ = r.Succ && t.Xb.Put([]byte(tbpfx+IdxSplit+"ftlen"), []byte(t.FTLen), nil) == nil
+	if r.Succ {
+		r.Info = "创建表“" + name + "”成功！"
+	} else {
+		r.Info = "创建表“" + name + "”失败！"
+	}
+	return
+}
+func (t *TableInfo) Open(name string) (tbif *TableInfo) {
+	if name == "" {
+		return
+	}
+	tbpfx := TbInfopfx + Split + name //表信息前缀
+	tf := NewTableInfo(t.Xb)
+	tf.Name = name
+	data, _ := t.Xb.Get([]byte(tbpfx), nil) //打开字段信息
+	tf.Fields = strings.Split(string(data), Split)
+	data, _ = t.Xb.Get([]byte(tbpfx+IdxSplit+"ty"), nil) //打开主键信息
+	tf.FieldType = strings.Split(string(data), Split)
+	data, _ = t.Xb.Get([]byte(tbpfx+IdxSplit+"pk"), nil) //打开主键信息
+	tf.Pk = string(data)
+	data, _ = t.Xb.Get([]byte(tbpfx+IdxSplit+"idx"), nil) //打开索引信息
+	tf.Idxs = strings.Split(string(data), Split)
+	data, _ = t.Xb.Get([]byte(tbpfx+IdxSplit+"ft"), nil) //打开全文索引信息
+	tf.FullText = strings.Split(string(data), Split)
+	data, _ = t.Xb.Get([]byte(tbpfx+IdxSplit+"ftlen"), nil) //全文索引长度信息
+	tf.FTLen = string(data)
+
+	tbif = tf
+	return
+}
+
+//删除表信息
+func (t *TableInfo) Del(name string) (r ReInfo) {
+	if name == "" {
+		return
+	}
+	tbpfx := TbInfopfx + Split + name //表信息前缀
+	iter := t.Xb.NewIterator(util.BytesPrefix([]byte(tbpfx)), nil)
+	for iter.Next() {
+		err = t.Xb.Delete(iter.Key(), nil)
+		if err != nil {
+			r.Info = err.Error()
+			r.Succ = false
+			break
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		r.Info = err.Error()
+		r.Succ = false
+	}
+	r.Info = "删除" + name + "成功！"
+	r.Succ = true
+	return
+}

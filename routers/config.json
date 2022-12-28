@@ -1,0 +1,7 @@
+{
+    "port":"8049",
+    "pws":"123456",
+    "dbpath":"F:/research/",
+    "dbidxcount":0,
+    "minlentext":49
+}

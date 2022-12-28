@@ -3,47 +3,45 @@ package routers
 import (
 	"encoding/json"
 	"net/http"
-	"research/base"
-	"research/pubgo"
 	"strconv"
 )
 
 func catapost(w http.ResponseWriter, req *http.Request) {
 
-	//ts := pubgo.Newts() //计算执行时间
-
-	//mu.Lock() //leveldb仅支持单进程数据操作。
-	//defer mu.Unlock()
+	mu.Lock() //leveldb仅支持单进程数据操作。
+	defer mu.Unlock()
 
 	params := postparas(req)
-	Rmsg := NewRmsg()
-	id := params["id"]
-	title := params["title"]
-	fid := params["fid"]
-	isleaf := params["isleaf"] //是否叶子目录。叶子目录下即文章。
-	psw := params["psw"]
-	if psw != pubgo.ConfigMap["pws"].(string) { //密码不对
-		Rmsg.Msg = "密码不对"
-		json.NewEncoder(w).Encode(Rmsg)
+	serpsw := ConfigMap["pws"].(string)                             //服务器端不设置密码，即不可以进行操作
+	if serpsw == "" || params["psw"] != ConfigMap["pws"].(string) { //密码不对
+		w.Write([]byte("密码不对"))
 		return
 	}
-	if title == "" {
-		Rmsg.Msg = "标题不能为空"
-		json.NewEncoder(w).Encode(Rmsg)
-		return
+	//url参数名称必须与表字段名称一致
+	//Table["ca"].Insert()
+	r := InsOrUpd("ca", params, params["iou"])
+	//添加一条以目录标题的空内容文章，以便能够搜索到目录
+	if r.Succ {
+		paramsrt := map[string]string{
+			"id":    "",
+			"title": "",
+			"fid":   "",
+			"split": "。",
+			"url":   "",
+			"text":  "",
+			"psw":   "",
+		}
+		id := ""
+		if params["id"] == "" {
+			id = strconv.Itoa(Table["ca"].Ac.GetidNoInc() - 1)
+		} else {
+			id = params["id"]
+		}
+		paramsrt["title"] = params["title"]
+		paramsrt["fid"] = id
+		paramsrt["psw"] = params["psw"]
+		InsArt(paramsrt)
 	}
 
-	ifid, _ := strconv.Atoi(fid)
-	iid, _ := strconv.Atoi(id)
-
-	r := base.Pcata.Insert(iid, title, isleaf, ifid)
-	//ys := ts.Gstrts()
-	if r {
-		Rmsg.Msg = "提交成功"
-		Rmsg.Succ = true
-		//Rmsg.Time = ys
-	} else {
-		Rmsg.Msg = "提交失败。"
-	}
-	json.NewEncoder(w).Encode(Rmsg)
+	json.NewEncoder(w).Encode(r)
 }

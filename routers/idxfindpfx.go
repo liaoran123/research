@@ -74,11 +74,13 @@ func (i *idxExefunc) add(rd []byte) bool {
 	if strings.Contains(string(ks[0]), " ") {
 		return true
 	}
-	if strings.Contains(string(ks[0]), "\u3000") {
+	k0 := string(ks[0])
+	qk0 := strconv.Quote(k0)
+	if !strings.Contains(qk0, k0) { //存在需要转义的，都过滤
 		return true
 	}
 	if !strings.Contains(i.r.String(), string(ks[0])) {
-		i.r.WriteString("{\"key\":\"" + strconv.Quote(string(ks[0])) + "\"},")
+		i.r.WriteString("{\"key\":" + qk0 + "},")
 	} else {
 		return true
 	}

@@ -149,23 +149,23 @@ func (e *SeExefunc) RdToString(rd []byte) {
 */
 //组合查询
 func (e *SeExefunc) exsit() (find bool) {
-	find = true
 	if len(e.ks) < 2 {
+		find = true
 		return
 	}
 	id := ArtSecToId(e.artid, e.secid)
 	idxvalue := Table[e.tbname].Ifo.FieldChByte("id", id)
 	btext := Table[e.tbname].Select.GetPKValue(idxvalue)
-	sec := string(btext)
-	secstr := string(sec)
+	//sec := string(btext)
+	secstr := string(btext)
 	fc := 0
-	for i := 1; i < len(e.ks); i++ { //for _, v := range e.ks { //如果在该段落内容里，所有的词组都存在，即是匹配。
+	for i := 0; i < len(e.ks); i++ { //for _, v := range e.ks { //如果在该段落内容里，所有的词组都存在，即是匹配。
 		if strings.Contains(secstr, Sublen(e.ks[i], 7)) {
 			fc++
 		}
 		//find = find && strings.Contains(secstr, Sublen(e.ks[i], 7)) //精准查询
 	}
-	if fc > len(e.ks)/2 { //存在一半即当为匹配
+	if fc > len(e.ks)/2+1 { //存在一半以上即当为匹配
 		find = true
 	}
 	return

@@ -285,8 +285,8 @@ func (s *Select) GetRecordsForIdx(idxname, idxvalue []byte, b, count int) (r *Tb
 
 //根据索引记录列表返回表记录数据
 //b，开始记录，count，返回条数
-func (s *Select) WhereIdx(fieldname, value []byte, b, count int) (r *TbData) { //GetTableRecordForIdx
-	r = s.WhereIdxs(fieldname, value, b, count, true)
+func (s *Select) WhereIdx(fieldname, value []byte, asc bool, b, count int) (r *TbData) { //GetTableRecordForIdx
+	r = s.WhereIdxs(fieldname, value, asc, b, count, true)
 	/*
 		//ks := s.GetRecordsForIdx(fieldname, value, b, count)
 		key := s.GetIdxPrefix(fieldname, value) //ca.fid-
@@ -310,14 +310,14 @@ func (s *Select) WhereIdx(fieldname, value []byte, b, count int) (r *TbData) { /
 
 //根据索引匹配记录列表返回表记录数据，相当于sql的like语句
 //b，开始记录，count，返回条数
-func (s *Select) WhereIdxLike(fieldname, value []byte, b, count int) (r *TbData) { //GetTableRecordForIdx
-	r = s.WhereIdxs(fieldname, value, b, count, false)
+func (s *Select) WhereIdxLike(fieldname, value []byte, asc bool, b, count int) (r *TbData) { //GetTableRecordForIdx
+	r = s.WhereIdxs(fieldname, value, asc, b, count, false)
 	return
 }
 
 //根据索引等于或匹配记录列表返回表记录数据
 //b，开始记录，count，返回条数
-func (s *Select) WhereIdxs(fieldname, value []byte, b, count int, eq bool) (r *TbData) { //GetTableRecordForIdx
+func (s *Select) WhereIdxs(fieldname, value []byte, asc bool, b, count int, eq bool) (r *TbData) { //GetTableRecordForIdx
 	gip := map[bool]func(fn, fv []byte) []byte{
 		true:  s.GetIdxPrefix,
 		false: s.GetIdxPrefixLike,
@@ -402,9 +402,9 @@ func (s *Select) WherePK(value []byte) (r *TbData) { //GetTableRecordForIdx
 
 //根据根据主键值匹配获取数据，仅主键为字符串时有效
 //b，开始记录，count，返回条数
-func (s *Select) WherePKLike(value []byte, b, count int) (r *TbData) { //GetTableRecordForIdx
+func (s *Select) WherePKLike(value []byte, asc bool, b, count int) (r *TbData) { //GetTableRecordForIdx
 	key := s.GetPkKeyLike(value)
-	tbd := s.FindPrefix(key, true, b, count)
+	tbd := s.FindPrefix(key, asc, b, count)
 	if tbd == nil {
 		return
 	}

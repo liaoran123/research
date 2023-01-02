@@ -1,0 +1,196 @@
+//leveldb公共函数
+package xbdb
+
+import (
+	"bytes"
+	"fmt"
+
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
+)
+
+//连接或新建数据库
+type Levdb struct {
+	Db *leveldb.DB
+}
+
+var err error
+
+func Newleveldb(path string) *Levdb { //*leveldb.DB {
+	db, err := leveldb.OpenFile(path, nil) //"path/to/db"
+	if err != nil {
+		fmt.Println(err)
+		//log.Fatal(err)
+		return &Levdb{}
+	}
+	return &Levdb{Db: db}
+}
+
+//获取值
+func (lb *Levdb) GetString(k string) string {
+	key, _ := lb.Db.Get([]byte(k), nil)
+	return string(key)
+}
+func (lb *Levdb) Getbyte(k string) []byte {
+	key, _ := lb.Db.Get([]byte(k), nil)
+	if key == nil {
+		key = []byte("")
+	}
+	return key
+}
+
+//数据库遍历
+func (lb *Levdb) Fordb(f func(k, v []byte)) {
+	iter := lb.Db.NewIterator(nil, nil)
+	for iter.Next() {
+		f(iter.Key(), iter.Value())
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+//查找然后迭代遍历
+func (lb *Levdb) Find(key string, f func(k, v []byte)) {
+	iter := lb.Db.NewIterator(nil, nil)
+	for ok := iter.Seek([]byte(key)); ok; ok = iter.Next() {
+		f(iter.Key(), iter.Value())
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+func (lb *Levdb) FindLimit(key string, f func(k, v []byte) (b bool, s string)) (b bool, s string) {
+	iter := lb.Db.NewIterator(nil, nil)
+	for ok := iter.Seek([]byte(key)); ok; ok = iter.Next() {
+		b, s = f(iter.Key(), iter.Value())
+		if b {
+			break
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+	return
+}
+
+//使用特定前缀迭代遍历数据库内容的子集
+
+func (lb *Levdb) FindPrefixFun(Prefix string, f func(k, v []byte)) {
+	iter := lb.Db.NewIterator(util.BytesPrefix([]byte(Prefix)), nil)
+	for iter.Next() {
+		//fmt.Println(string(iter.Key()), string(iter.Value()))
+		f(iter.Key(), iter.Value())
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func (lb *Levdb) FindPrebyteFun(Prefix []byte, f func(k, v []byte)) {
+	iter := lb.Db.NewIterator(util.BytesPrefix(Prefix), nil)
+	for iter.Next() {
+		//fmt.Println(string(iter.Key()), string(iter.Value()))
+		f(iter.Key(), iter.Value())
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+func (lb *Levdb) FindPrefixReturn(Prefix string, f func(k, v []byte) bool) {
+	iter := lb.Db.NewIterator(util.BytesPrefix([]byte(Prefix)), nil)
+	for iter.Next() {
+		//fmt.Println(string(iter.Key()), string(iter.Value()))
+		if f(iter.Key(), iter.Value()) {
+			return
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+func (lb *Levdb) FindPrefixRet(Prefix string, f func(k, v []byte) string) string {
+	iter := lb.Db.NewIterator(util.BytesPrefix([]byte(Prefix)), nil)
+	var buf bytes.Buffer
+	for iter.Next() {
+		buf.WriteString(f(iter.Key(), iter.Value()))
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		return ""
+	}
+	return buf.String()
+}
+func (lb *Levdb) FindPrefixTopFun(Prefix string, max int, f func(k, v []byte)) {
+	iter := lb.Db.NewIterator(util.BytesPrefix([]byte(Prefix)), nil)
+	loop := 0
+	for iter.Next() {
+		f(iter.Key(), iter.Value())
+		loop++
+		if loop > max {
+			break
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+func (lb *Levdb) FindPrefixDescTopFun(Prefix string, max int, f func(k, v []byte)) {
+	iter := lb.Db.NewIterator(util.BytesPrefix([]byte(Prefix)), nil)
+	loop := 0
+	iter.Last()
+	for iter.Prev() {
+		f(iter.Key(), iter.Value())
+		loop++
+		if loop > max {
+			break
+		}
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+//区间
+func (lb *Levdb) FindRangeFun(b, e string, f func(k, v []byte)) {
+	iter := lb.Db.NewIterator(&util.Range{Start: []byte(b), Limit: []byte(e)}, nil)
+	for iter.Next() {
+		f(iter.Key(), iter.Value())
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+func (lb *Levdb) FindRangeRet(b, e string, f func(k, v []byte) string) string {
+	var buf bytes.Buffer
+	iter := lb.Db.NewIterator(&util.Range{Start: []byte(b), Limit: []byte(e)}, nil)
+	for iter.Next() {
+		buf.WriteString(f(iter.Key(), iter.Value()))
+	}
+	iter.Release()
+	err = iter.Error()
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	return buf.String()
+}

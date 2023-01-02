@@ -1,0 +1,45 @@
+//小白数据库
+//创建表
+package xbdb
+
+import (
+	"fmt"
+
+	"github.com/syndtr/goleveldb/leveldb"
+)
+
+func Testdb(xb *leveldb.DB) {
+	tbifo := NewTableInfo(xb)
+	//创建目录表
+	name := "ca"                                          //目录表
+	fields := []string{"id", "title", "fid", "isleaf"}    //字段
+	fieldType := []string{"int", "string", "int", "bool"} //字段
+	idxs := []string{"2"}                                 //索引字段,fields的下标对应的字段
+	r := tbifo.Create(name, fields, fieldType, idxs)
+	fmt.Printf("r: %v\n", r)
+	r1 := tbifo.Open(name)
+	fmt.Printf("r1: %v\n", r1)
+
+	//创建文章表
+	name = "art"                                                     //目录表
+	fields = []string{"id", "title", "text", "fid", "split", "url"}  //字段
+	fieldType = []string{"int", "string", "int", "string", "string"} //字段
+	idxs = []string{"3"}                                             //索引字段,fields的下标对应的字段
+	r = tbifo.Create(name, fields, fieldType, idxs)
+	fmt.Printf("r: %v\n", r)
+	r1 = tbifo.Open(name)
+	fmt.Printf("r1: %v\n", r1)
+	//r2 := tbifo.Del(name)
+	//fmt.Printf("r2: %v\n", r2)
+	//添加数据
+	catb := NewTable(xb, "ca")
+	var vals [][]byte
+	vals = append(vals, []byte("6"))
+	vals = append(vals, []byte("咐嘱品"))
+	vals = append(vals, []byte("3"))
+	vals = append(vals, []byte("1"))
+	catb.Insert(vals)
+	//tb.DelIdx("ca", "fid", "1")
+	//tb.DelPK("ca", []byte("1"))
+	//tb.Delete("ca")
+}

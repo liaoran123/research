@@ -197,15 +197,17 @@ func (e *SeExefunc) getartmeta() (r string) {
 	eid := e.secid
 	//var ks [][]byte
 	for len(meta) < e.mlen*3 { //每个中文3个字节
-		eid++
+
 		//fmt.Println(string(iter.Key()), string(iter.Value()))
 		meta += string(iter.Value())
+		eid++
 		//ks = bytes.Split(iter.Key(), []byte(xbdb.Split))
 		//_, eid = IdToArtSec(string(ks[1]))
 		ok = iter.Next()
 		if !ok {
 			break
 		}
+
 	}
 
 	/*

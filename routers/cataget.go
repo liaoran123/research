@@ -40,7 +40,7 @@ func getChildCatas(id string, w http.ResponseWriter) {
 		idxfield = "fid"
 	)
 	idxvalue := Table[string(tbname)].Ifo.FieldChByte(idxfield, id)
-	tbd := Table[string(tbname)].Select.WhereIdx([]byte(idxfield), idxvalue, 0, -1)
+	tbd := Table[string(tbname)].Select.WhereIdx([]byte(idxfield), idxvalue, true, 0, -1)
 	if tbd == nil {
 		return
 	}

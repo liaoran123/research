@@ -27,7 +27,7 @@ func Artitem(w http.ResponseWriter, req *http.Request) {
 	if params["b"] != "" {
 		b, _ = strconv.Atoi(params["b"])
 	}
-	tbd := Table[string(tbname)].Select.WhereIdx([]byte(idxfield), idxvalue, b, count)
+	tbd := Table[string(tbname)].Select.WhereIdx([]byte(idxfield), idxvalue, true, b, count)
 	if tbd == nil {
 		return
 	}

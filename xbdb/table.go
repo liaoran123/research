@@ -143,11 +143,21 @@ func (t *Table) ActIDX(idxfield, idxvalue, pkvalue, val []byte, Act string) (r R
 	return
 }
 
+//将记录转换为map
+func (t *Table) RDtoMap(Rd []byte, ifo *TableInfo) (r map[string]string) {
+	r = make(map[string]string, len(ifo.Fields))
+	vs := bytes.Split(Rd, []byte(Split))
+	for i, v := range vs {
+		r[ifo.Fields[i]] = ifo.ByteChString(ifo.FieldType[i], v)
+	}
+	return
+}
+
 /*
 前缀遍历
 bint 第几条开始
 asc,升/降序
-*/
+
 func (t *Table) FindPrefix(key []byte, asc bool, b, count int) (r *TbDataMap) {
 	iter, ok := t.Select.IterPrefixMove(key, asc)
 	if !ok {
@@ -157,10 +167,10 @@ func (t *Table) FindPrefix(key []byte, asc bool, b, count int) (r *TbDataMap) {
 	return
 }
 
-/*
+
 范围遍历
 asc,升/降序
-*/
+
 func (t *Table) FindRand(bkey, ekey []byte, asc bool, b, count int) (r *TbDataMap) {
 	iter, ok := t.Select.IterRandMove(bkey, ekey, asc)
 	if !ok {
@@ -170,10 +180,10 @@ func (t *Table) FindRand(bkey, ekey []byte, asc bool, b, count int) (r *TbDataMa
 	return
 }
 
-/*
+
 定位遍历
 asc,升/降序
-*/
+
 func (t *Table) FindSeek(key []byte, asc bool, b, count int) (r *TbDataMap) {
 	iter, ok := t.Select.IterSeekMove(key)
 	if !ok {
@@ -182,3 +192,4 @@ func (t *Table) FindSeek(key []byte, asc bool, b, count int) (r *TbDataMap) {
 	r = NewIters(iter, ok, asc, b, count).ForDataToMap(&t.Ifo)
 	return
 }
+*/

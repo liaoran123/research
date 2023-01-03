@@ -287,24 +287,6 @@ func (s *Select) GetRecordsForIdx(idxname, idxvalue []byte, b, count int) (r *Tb
 //b，开始记录，count，返回条数
 func (s *Select) WhereIdx(fieldname, value []byte, asc bool, b, count int) (r *TbData) { //GetTableRecordForIdx
 	r = s.WhereIdxs(fieldname, value, asc, b, count, true)
-	/*
-		//ks := s.GetRecordsForIdx(fieldname, value, b, count)
-		key := s.GetIdxPrefix(fieldname, value) //ca.fid-
-		tbd := s.FindPrefix(key, true, b, count)
-		if tbd == nil {
-			return
-		}
-		var keys []string
-		var pk, pkval []byte
-		tkv := KV{}
-		for _, kv := range tbd {
-			keys = strings.Split(kv.K, Split)
-			pk = []byte(keys[len(keys)-1])
-			pkval = s.GetPKValue(pk)
-			tkv.K = string(pk)
-			tkv.V = string(pkval)
-			r = append(r, tkv)
-		}*/
 	return
 }
 
@@ -328,18 +310,6 @@ func (s *Select) WhereIdxs(fieldname, value []byte, asc bool, b, count int, eq b
 		return
 	}
 	r = s.IdxsGetRecords(tbd)
-	/*
-		var keys []string
-		var pk, pkval []byte
-		tkv := KV{}
-		for _, kv := range tbd {
-			keys = strings.Split(kv.K, Split)
-			pk = []byte(keys[len(keys)-1])
-			pkval = s.GetPKValue(pk)
-			tkv.K = string(pk)
-			tkv.V = string(pkval)
-			r = append(r, tkv)
-		}*/
 	return
 }
 
@@ -380,16 +350,6 @@ func (s *Select) WhereIdxFun(fieldname, value []byte, asc bool, f func(rd []byte
 func (s *Select) WhereIdxLikeFun(fieldname, value []byte, asc bool, f func(rd []byte) bool) {
 	key := s.GetIdxPrefixLike(fieldname, value)
 	s.FindPrefixFun(key, asc, f)
-	/*
-		tdb := s.FindPrefix(key, asc, 0, -1)
-		if tdb == nil {
-			return
-		}
-		for _, v := range tdb.Rd {
-			if !f(v) {
-				return
-			}
-		}*/
 }
 
 //根据根据主键值获取数据

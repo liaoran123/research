@@ -56,7 +56,7 @@ func Search(w http.ResponseWriter, req *http.Request) {
 	Se.r.WriteString("\"lastkey\":" + strconv.Quote(Se.lastkey) + ",")
 	setime := ts.Gstrts()
 	Se.r.WriteString("\"setime\":\"" + setime + "\",")
-	fmt.Printf("setime: %v\n", setime)
+	//fmt.Printf("setime: %v\n", setime)
 	Se.r.WriteString("\"count\":" + strconv.Itoa(Se.loop) + "}")
 	w.Write(Se.r.Bytes())
 	//w.Write([]byte(strconv.Quote(Se.r.String()))) //必须使用strconv.Quote转义

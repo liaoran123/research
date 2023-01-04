@@ -10,6 +10,10 @@ func InsOrUpd(name string, params map[string]string, insorupd string) (r xbdb.Re
 		"ins": ins,
 		"upd": upd,
 	}
+	if insorupd == "" {
+		insorupd = "ins"
+	}
+	/*2023-01-04修改屏蔽
 	var vals [][]byte
 	f, v := "", ""
 	for i := 0; i < len(Table[name].Ifo.FieldType); i++ {
@@ -17,9 +21,8 @@ func InsOrUpd(name string, params map[string]string, insorupd string) (r xbdb.Re
 		v = Table[name].Ifo.Fields[i]
 		vals = append(vals, Table[name].Ifo.TypeChByte(f, params[v]))
 	}
-	if insorupd == "" {
-		insorupd = "ins"
-	}
+	*/
+	vals := Table[name].StrToByte(params) //2023-01-04增加
 	r = iou[insorupd](name, vals)
 	return
 }

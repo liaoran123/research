@@ -143,6 +143,15 @@ func (t *Table) ActIDX(idxfield, idxvalue, pkvalue, val []byte, Act string) (r R
 	return
 }
 
+//字符串转byte
+//params字段对应的字符串map
+func (t *Table) StrToByte(params map[string]string) (r [][]byte) {
+	for i, v := range t.Ifo.Fields {
+		r = append(r, t.Ifo.TypeChByte(t.Ifo.FieldType[i], params[v]))
+	}
+	return
+}
+
 //将记录转换为map
 func (t *Table) RDtoMap(Rd []byte, ifo *TableInfo) (r map[string]string) {
 	r = make(map[string]string, len(ifo.Fields))

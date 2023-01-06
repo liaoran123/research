@@ -4,7 +4,6 @@ package xbdb
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -28,26 +27,9 @@ func (t *TbData) Release() {
 	TbDatapool.Put(t)
 }
 
-type TbDataMap struct {
-	Rd []map[string]string //记录
-}
-
-func (t *TbDataMap) Release() {
-	if t == nil {
-		return
-	}
-	t.Rd = t.Rd[:0]
-	TbDataMappool.Put(t)
-}
-
 var TbDatapool = sync.Pool{
 	New: func() interface{} {
 		return new(TbData)
-	},
-}
-var TbDataMappool = sync.Pool{
-	New: func() interface{} {
-		return new(TbDataMap)
 	},
 }
 
@@ -96,9 +78,38 @@ func (i *Iters) ForDataFun(f func(rd []byte) bool) {
 		}
 	}
 	i.iter.Release()
-	fmt.Println("跟踪执行次数:", loop) //跟踪执行次数
+	//fmt.Println("跟踪执行次数:", loop) //跟踪执行次数
 }
 
+//将key、value组合一个完整的记录
+func KVToRd(k, v []byte) (r []byte) {
+	ks := bytes.Split(k, []byte(Split))
+	////将key去除第一个前缀，剩下的就是数据，有以下2中情况
+	//索引：k=ca,fid-3-7 v=    得到:3-7-  (后面是空值)
+	//主键: k=ca-1 v=ddd-ccdd-fff 得到:1-ddd-ccdd-fff
+	ks = ks[1:]
+	r = JoinBytes(bytes.Join(ks, []byte(Split)), []byte(Split), v)
+	return
+}
+
+/*
+var TbDataMappool = sync.Pool{
+	New: func() interface{} {
+		return new(TbDataMap)
+	},
+}
+
+type TbDataMap struct {
+	Rd []map[string]string //记录
+}
+
+func (t *TbDataMap) Release() {
+	if t == nil {
+		return
+	}
+	t.Rd = t.Rd[:0]
+	TbDataMappool.Put(t)
+}
 //遍历结果集，转换为[]map[string]string
 func (i *Iters) ForDataToMap(ifo *TableInfo) (r *TbDataMap) { //[]map[string]string
 	r = TbDataMappool.Get().(*TbDataMap)
@@ -120,13 +131,4 @@ func (i *Iters) ForDataToMap(ifo *TableInfo) (r *TbDataMap) { //[]map[string]str
 	return
 }
 
-//将key、value组合一个完整的记录
-func KVToRd(k, v []byte) (r []byte) {
-	ks := bytes.Split(k, []byte(Split))
-	////将key去除第一个前缀，剩下的就是数据，有以下2中情况
-	//索引：k=ca,fid-3-7 v=    得到:3-7-  (后面是空值)
-	//主键: k=ca-1 v=ddd-ccdd-fff 得到:1-ddd-ccdd-fff
-	ks = ks[1:]
-	r = JoinBytes(bytes.Join(ks, []byte(Split)), []byte(Split), v)
-	return
-}
+*/

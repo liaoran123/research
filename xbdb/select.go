@@ -108,9 +108,20 @@ func (s *Select) ForDb(f func(rd []byte) bool) {
 
 /*
 遍历表数据
-*/
+
 func (s *Select) ForData(f func(rd []byte) bool) {
 	s.FindPrefixFun([]byte(s.Tbname+Split), true, f)
+}
+*/
+//遍历表数据
+func (s *Select) ForRDFun(asc bool, f func(rd []byte) bool) {
+	s.FindPrefixFun([]byte(s.Tbname+Split), asc, f)
+}
+
+//遍历表数据
+func (s *Select) ForRD(asc bool, b, count int) (r *TbData) {
+	r = s.FindPrefix([]byte(s.Tbname+Split), asc, b, count)
+	return
 }
 
 /*
@@ -228,7 +239,7 @@ func (s *Select) GetIdxPrefixKey(idxfield, idxvalue, pkvalue []byte) (r []byte) 
 func (s *Select) OneRecord(PKvalue []byte) (r *TbData) { //GetOneRecord
 	key := s.GetPkKey(PKvalue)
 	value := s.GetValue(key)
-	if value == nil {
+	if len(value) == 0 {
 		return
 	}
 	r = TbDatapool.Get().(*TbData)
@@ -305,7 +316,7 @@ func (s *Select) WhereIdxs(fieldname, value []byte, asc bool, b, count int, eq b
 		false: s.GetIdxPrefixLike,
 	}
 	key := gip[eq](fieldname, value) //ca.fid-
-	tbd := s.FindPrefix(key, true, b, count)
+	tbd := s.FindPrefix(key, asc, b, count)
 	if tbd == nil {
 		return
 	}
@@ -378,17 +389,6 @@ func (s *Select) WherePKLike(value []byte, asc bool, b, count int) (r *TbData) {
 func (s *Select) WherePKLikeFun(value []byte, b, count int, asc bool, f func(rd []byte) bool) { //GetTableRecordForIdx
 	key := s.GetPkKeyLike(value)
 	s.FindPrefixFun(key, asc, f)
-	/*
-		tbd := s.FindPrefix(key, asc, b, count)
-		if tbd == nil {
-			return
-		}
-		for _, v := range tbd.Rd {
-			if !f(v) {
-				return
-			}
-		}
-		tbd.Release()*/
 }
 
 //根据根据主键范围值获取数据

@@ -49,8 +49,8 @@ func getonerecord(tbname, idxfield, id string, w http.ResponseWriter) {
 	if tbd == nil {
 		return
 	}
-	r := DataToJson(tbd, Table[tbname].Ifo)
+	r := Table[tbname].DataToJson(tbd) //DataToJson(tbd, Table[tbname].Ifo)
 	w.Write(r.Bytes())
 	r.Reset()
-	bufpool.Put(r)
+	xbdb.Bufpool.Put(r)
 }

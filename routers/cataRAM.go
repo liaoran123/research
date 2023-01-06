@@ -104,7 +104,7 @@ func (c *CataRAMs) GetCaDirToJson(cataid int) (r string) {
 	var i uint32
 	cid := cataid
 	L := 0
-	jsonstr := "["
+	jsonstr := "{\"result\":["
 	for cid > 0 {
 		if i, ok = CRAMs.CataRAMMap[uint32(cid)]; ok {
 			/*
@@ -125,7 +125,7 @@ func (c *CataRAMs) GetCaDirToJson(cataid int) (r string) {
 			break
 		}
 	}
-	r = strings.Trim(jsonstr, ",") + "]"
+	r = strings.Trim(jsonstr, ",") + "]}"
 	return
 }
 

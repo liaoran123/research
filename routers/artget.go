@@ -37,12 +37,12 @@ func artget(w http.ResponseWriter, req *http.Request) {
 	tifo := Table[tbname].Ifo                                      //创建一个临时的表信息
 	tifo.Fields = append(Table[tbname].Ifo.Fields, "text")         //添加一个text字段
 	tifo.FieldType = append(Table[tbname].Ifo.FieldType, "string") //添加一个text字段类型
-	r := DataToJson(tdb, tifo)
+	r := Table[tbname].DataToJsonforIfo(tdb, &tifo)                //DataToJson(tdb, tifo)
 	if r != nil {
 		w.Write(r.Bytes())
 		//w.Write([]byte(strconv.Quote(r.String()))) //必须使用strconv.Quote转义
 		r.Reset()
-		bufpool.Put(r)
+		xbdb.Bufpool.Put(r)
 	}
 
 }

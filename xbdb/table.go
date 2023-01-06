@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -153,52 +154,71 @@ func (t *Table) StrToByte(params map[string]string) (r [][]byte) {
 }
 
 //将记录转换为map
-func (t *Table) RDtoMap(Rd []byte, ifo *TableInfo) (r map[string]string) {
-	r = make(map[string]string, len(ifo.Fields))
+func (t *Table) RDtoMap(Rd []byte) (r map[string]string) {
+	r = make(map[string]string, len(t.Ifo.Fields))
 	vs := bytes.Split(Rd, []byte(Split))
 	for i, v := range vs {
-		r[ifo.Fields[i]] = ifo.ByteChString(ifo.FieldType[i], v)
+		r[t.Ifo.Fields[i]] = t.Ifo.ByteChString(t.Ifo.FieldType[i], v)
 	}
 	return
 }
 
-/*
-前缀遍历
-bint 第几条开始
-asc,升/降序
+var Bufpool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
 
-func (t *Table) FindPrefix(key []byte, asc bool, b, count int) (r *TbDataMap) {
-	iter, ok := t.Select.IterPrefixMove(key, asc)
-	if !ok {
+func (t *Table) DataToJson(tbd *TbData) (r *bytes.Buffer) {
+	r = t.DataToJsonforIfo(tbd, &t.Ifo)
+	return
+}
+
+func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) {
+	if tbd == nil {
 		return
 	}
-	r = NewIters(iter, ok, asc, b, count).ForDataToMap(&t.Ifo)
-	return
-}
-
-
-范围遍历
-asc,升/降序
-
-func (t *Table) FindRand(bkey, ekey []byte, asc bool, b, count int) (r *TbDataMap) {
-	iter, ok := t.Select.IterRandMove(bkey, ekey, asc)
-	if !ok {
-		return
+	r = Bufpool.Get().(*bytes.Buffer)
+	var value [][]byte
+	jsonstr := ""
+	/*
+		[{"id":2,"title":"金刚经","fid":1,"isleaf":"0"},
+		{"id":3,"title":"六祖坛经","fid":1,"isleaf":"0"}]
+	*/
+	r.WriteString("{\"result\":[")
+	for j, v := range tbd.Rd {
+		if v == nil {
+			continue
+		}
+		r.WriteString("{")
+		value = bytes.Split(v, []byte(Split))
+		for i, fv := range Ifo.FieldType {
+			switch fv {
+			case "string":
+				jsonstr = "\"" + Ifo.Fields[i] + "\":" + strconv.Quote(string(value[i])) //strconv.Quote自动加字符串号
+			default:
+				iv := Ifo.ByteChString(Ifo.FieldType[i], value[i])
+				jsonstr = "\"" + Ifo.Fields[i] + "\":" + iv
+			}
+			if i != len(Ifo.FieldType)-1 {
+				jsonstr += ","
+			}
+			jsonstr = strings.Replace(jsonstr, "\n", "\\n", -1) //json转义
+			/*
+				jsonstr = strings.Replace(jsonstr, "\t", "\\t", -1) //json转义
+				jsonstr = strings.Replace(jsonstr, "\n", "\\n", -1) //json转义
+								content = strings.Replace(content, "\\u003c", "<", -1)
+					content = strings.Replace(content, "\\u003e", ">", -1)
+					content = strings.Replace(content, "\\u0026", "&", -1)
+			*/
+			r.WriteString(jsonstr)
+		}
+		r.WriteString("}")
+		if j != len(tbd.Rd)-1 {
+			r.WriteString(",")
+		}
 	}
-	r = NewIters(iter, ok, asc, b, count).ForDataToMap(&t.Ifo)
+	r.WriteString("]}")
+	tbd.Release()
 	return
 }
-
-
-定位遍历
-asc,升/降序
-
-func (t *Table) FindSeek(key []byte, asc bool, b, count int) (r *TbDataMap) {
-	iter, ok := t.Select.IterSeekMove(key)
-	if !ok {
-		return
-	}
-	r = NewIters(iter, ok, asc, b, count).ForDataToMap(&t.Ifo)
-	return
-}
-*/

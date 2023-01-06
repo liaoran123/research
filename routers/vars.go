@@ -1,14 +1,19 @@
 package routers
 
 import (
-	"research/xbdb"
+	"bytes"
 	"sync"
 )
 
 var (
 	ConfigMap map[string]interface{} //配置文件
 	mu        sync.RWMutex
-	tifo      *xbdb.TableInfo
+	//tifo      *xbdb.TableInfo
+	bufpool = sync.Pool{
+		New: func() interface{} {
+			return new(bytes.Buffer)
+		},
+	}
 )
 
 /*

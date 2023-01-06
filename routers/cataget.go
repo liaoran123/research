@@ -2,6 +2,7 @@ package routers
 
 import (
 	"net/http"
+	"research/xbdb"
 	"strconv"
 )
 
@@ -39,17 +40,17 @@ func getChildCatas(id string, w http.ResponseWriter) {
 		tbname   = "ca"
 		idxfield = "fid"
 	)
-	idxvalue := Table[string(tbname)].Ifo.FieldChByte(idxfield, id)
+	idxvalue := Table[tbname].Ifo.FieldChByte(idxfield, id)
 	tbd := Table[string(tbname)].Select.WhereIdx([]byte(idxfield), idxvalue, true, 0, -1)
 	if tbd == nil {
 		return
 	}
-	r := DataToJson(tbd, Table[string(tbname)].Ifo)
+	r := Table[tbname].DataToJson(tbd) // DataToJson(tbd, Table[tbname].Ifo)
 	if r != nil {
 		w.Write(r.Bytes())
 		//w.Write([]byte(strconv.Quote(r.String()))) //必须使用strconv.Quote转义
 		r.Reset()
-		bufpool.Put(r)
+		xbdb.Bufpool.Put(r)
 	}
 
 }

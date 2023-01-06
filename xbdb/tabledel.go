@@ -30,6 +30,13 @@ func (t *Table) Delete(pk []byte) (r ReInfo) {
 	return
 }
 
+//入口参数为字符串的删除函数
+func (t *Table) Del(pk string) (r ReInfo) {
+	bpk := t.Ifo.TypeChByte(t.Ifo.FieldType[0], pk)
+	r = t.Delete(bpk)
+	return
+}
+
 //按删除一个key
 func (t *Table) del(k, v []byte) (r ReInfo) {
 	err = t.Db.Delete(k, nil)

@@ -16,6 +16,19 @@ func (t *Table) Insert(vals [][]byte) (r ReInfo) {
 	return
 }
 
+//添加一条数据以及相关索引等所有数据，默认数据与字段一一对应。
+func (t *Table) Ins(params map[string]string) (r ReInfo) {
+	if string(params["id"]) == "" { //如果主键为空，则是使用自动增值
+		if t.Ac == nil {
+			t.newAutoinc()
+		}
+		params["id"] = t.Ac.GetidStr()
+	}
+	vals := t.StrToByte(params)
+	r = t.Act(vals, "insert")
+	return
+}
+
 //添加一个kv
 func (t *Table) put(k, v []byte) (r ReInfo) {
 	err = t.Db.Put(k, v, nil) //vals[0]=主键

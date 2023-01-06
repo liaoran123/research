@@ -11,3 +11,8 @@ func (t *Table) Updata(vals [][]byte) (r ReInfo) {
 	r = t.Insert(vals)
 	return
 }
+func (t *Table) Upd(params map[string]string) (r ReInfo) {
+	vals := t.StrToByte(params)
+	r = t.Updata(vals)
+	return
+}

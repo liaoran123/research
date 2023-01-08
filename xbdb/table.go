@@ -222,3 +222,34 @@ func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) 
 	tbd.Release()
 	return
 }
+
+//根据主键获取表的一条记录（获取一个key的values）
+func (t *Table) Record(PKvalue string) (r *TbData) { //GetOneRecord
+	key := t.Ifo.FieldChByte(t.Ifo.Fields[0], PKvalue)
+	r = t.Select.OneRecord(key)
+	return
+}
+
+//根据主键获取表的一条记录（获取一个key的values）
+func (t *Table) Records(PKids []string) (r *TbData) {
+	var key, value []byte
+	r = TbDatapool.Get().(*TbData)
+	for _, v := range PKids {
+		key = t.Ifo.FieldChByte(t.Ifo.Fields[0], v)
+		value = t.Select.GetValue(key)
+		if len(value) == 0 {
+			continue
+		}
+		r.Rd = append(r.Rd, KVToRd(key, value))
+	}
+	return
+}
+
+//根据主键区间获取表的区间记录
+func (t *Table) RecordRand(bpk, epk string) (r *TbData) {
+	pfx := []byte(t.Name + Split)
+	bid := t.Ifo.FieldChByte(t.Ifo.Fields[0], bpk)
+	eid := t.Ifo.FieldChByte(t.Ifo.Fields[0], epk)
+	r = t.Select.FindRand(JoinBytes(pfx, bid), JoinBytes(pfx, eid), true, 0, -1)
+	return
+}

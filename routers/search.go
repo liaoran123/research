@@ -33,21 +33,27 @@ func Search(w http.ResponseWriter, req *http.Request) {
 		//《一人心念口言--14371+0--0
 		//p, _ = strconv.Unquote(p) //反转义
 		ps := strings.Split(p, xbdb.Split)
-		ips := strings.Split(ps[1], idssplit) //将14371+0转为byte的字符串
-		if len(ips) == 2 {
-			aid, _ := strconv.Atoi(ips[0])
-			sid, _ := strconv.Atoi(ips[1])
-			ids := ArtSecToId(aid, sid)
-			pos, _ := strconv.Atoi(ps[2])
-			key = JoinBytes([]byte(ps[0]), []byte(xbdb.Split), []byte(ids), []byte(xbdb.Split), IntToBytes(pos))
-			key = Table[tbname].Select.GetIdxPrefixLike([]byte("s"), key)
-			iter, ok = Table[tbname].Select.IterSeekMove([]byte(key))
+		if len(ps) > 1 {
+			ips := strings.Split(ps[1], idssplit) //将14371+0转为byte的字符串
+			if len(ips) > 1 {
+				aid, _ := strconv.Atoi(ips[0])
+				sid, _ := strconv.Atoi(ips[1])
+				ids := ArtSecToId(aid, sid)
+				pos, _ := strconv.Atoi(ps[2])
+				key = JoinBytes([]byte(ps[0]), []byte(xbdb.Split), []byte(ids), []byte(xbdb.Split), IntToBytes(pos))
+				key = Table[tbname].Select.GetIdxPrefixLike([]byte("s"), key)
+				iter, ok = Table[tbname].Select.IterSeekMove([]byte(key))
+			} else {
+				ok = false
+				fmt.Println("错误的定位页p,ps：", p, ps)
+			}
 		} else {
+			ok = false
 			fmt.Println("错误的定位页p：", p)
 		}
 
 	}
-	if iter == nil {
+	if !ok {
 		return
 	}
 	ts := pubgo.Newts() //计算执行时间

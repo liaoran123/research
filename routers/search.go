@@ -34,13 +34,18 @@ func Search(w http.ResponseWriter, req *http.Request) {
 		//p, _ = strconv.Unquote(p) //反转义
 		ps := strings.Split(p, xbdb.Split)
 		ips := strings.Split(ps[1], idssplit) //将14371+0转为byte的字符串
-		aid, _ := strconv.Atoi(ips[0])
-		sid, _ := strconv.Atoi(ips[1])
-		ids := ArtSecToId(aid, sid)
-		pos, _ := strconv.Atoi(ps[2])
-		key = JoinBytes([]byte(ps[0]), []byte(xbdb.Split), []byte(ids), []byte(xbdb.Split), IntToBytes(pos))
-		key = Table[tbname].Select.GetIdxPrefixLike([]byte("s"), key)
-		iter, ok = Table[tbname].Select.IterSeekMove([]byte(key))
+		if len(ips) == 2 {
+			aid, _ := strconv.Atoi(ips[0])
+			sid, _ := strconv.Atoi(ips[1])
+			ids := ArtSecToId(aid, sid)
+			pos, _ := strconv.Atoi(ps[2])
+			key = JoinBytes([]byte(ps[0]), []byte(xbdb.Split), []byte(ids), []byte(xbdb.Split), IntToBytes(pos))
+			key = Table[tbname].Select.GetIdxPrefixLike([]byte("s"), key)
+			iter, ok = Table[tbname].Select.IterSeekMove([]byte(key))
+		} else {
+			fmt.Println("错误的定位页p：", p)
+		}
+
 	}
 	if iter == nil {
 		return

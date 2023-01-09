@@ -112,16 +112,16 @@ func NewSeExefunc(tbname, kw, dir string, count int) *SeExefunc {
 	}
 }
 func (e *SeExefunc) search(rd []byte) bool {
-	if time.Since(e.bt).Seconds() > 3 { //只要是控制组合查询超时时间
-		fmt.Println("组合查询超时3秒。") //多次执行由于会加载内存，则可以完成。
+	if time.Since(e.bt).Seconds() > 3000000000000000000 { //只要是控制组合查询超时时间
 		e.loop = 21              //以便用户点击下一页，分散时间进行搜索，缓解性能问题。
+		fmt.Println("组合查询超时3秒。") //多次执行由于会加载内存，则可以完成。
 		return false
 	}
 	if !strings.Contains(string(rd), e.mkw) {
 		return false //key不存在kw，即已经超过所需数据
 	}
 	//解构rd，转为字符串lastkey。参照artpost.ArtSecToId组合规则
-	keys := bytes.Split(rd, []byte(xbdb.Split))
+	keys := Table[e.tbname].Split(rd) //bytes.Split(rd, []byte(xbdb.Split))
 	artid, secid := IdToArtSec(string(keys[1]))
 	if artid == 0 {
 		return true

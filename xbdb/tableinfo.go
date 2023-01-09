@@ -3,6 +3,7 @@
 package xbdb
 
 import (
+	"bytes"
 	"strconv"
 	"strings"
 
@@ -11,10 +12,10 @@ import (
 )
 
 const (
-	Split      = "--"    //字段分隔符
-	ChSplit    = "#f0"   //字段分隔符的转义码
-	IdxSplit   = ".."    //索引分隔符，转义码 #f1
-	ChIdxSplit = "#f1"   //索引分隔符的转义码
+	Split      = "-"     //字段分隔符
+	ChSplit    = "- "    //字段分隔符的转义码，原Split+空格。空格不会导致转换后排序不正确
+	IdxSplit   = "."     //索引分隔符，转义码 原IdxSplit+空格。空格不会导致转换后排序不正确
+	ChIdxSplit = ". "    //索引分隔符的转义码
 	TbInfopfx  = "tbifo" //表信息的前缀
 	Tbspfx     = "table" //表列表的前缀
 )
@@ -116,7 +117,11 @@ func (t *TableInfo) Del(name string) (r ReInfo) {
 }
 
 //将字段类型数据转换为对应的[]byte数据数组
-func (t *TableInfo) TypeChByte(FieldType, Fieldvalue string) (r []byte) {
+func (t *TableInfo) TypeChByte(fieldType, Fieldvalue string) (r []byte) {
+	FieldType := fieldType
+	if strings.Contains(FieldType, "float") { //float(2),float的格式
+		FieldType = "float"
+	}
 	switch FieldType {
 	case "int":
 		iv, _ := strconv.Atoi(Fieldvalue)
@@ -130,6 +135,50 @@ func (t *TableInfo) TypeChByte(FieldType, Fieldvalue string) (r []byte) {
 
 	default:
 		r = []byte(Fieldvalue)
+	}
+	return
+}
+
+//将字段[]byte数据数组转换为字符串
+func (t *TableInfo) ByteChString(fieldType string, val []byte) (r string) {
+	FieldType := fieldType
+	prec := 2                                  //小数位
+	if strings.Contains(fieldType, "float(") { //如果是float(2) float格式
+		FieldType, prec = floatch(fieldType)
+		if prec == 0 { //格式错误
+			r = ""
+			return
+		}
+	}
+	switch FieldType {
+	case "int":
+		ir := BytesToInt(val)
+		r = strconv.Itoa(ir)
+	case "int64":
+		ir := BytesToInt64(val)
+		r = strconv.FormatInt(ir, 10)
+	case "float": //float(2) float格式 (2)，表示小数位
+		ir := ByteToFloat64(val)                   //只支持float64位
+		r = strconv.FormatFloat(ir, 'f', prec, 64) //(ir, 'f', 2, 64)  2,2位小数点
+	default:
+		r = string(val)
+	}
+	return
+}
+
+//float(2) float格式处理，返回FieldType=float，prec=2，小数点位数
+func floatch(fieldType string) (FieldType string, prec int) {
+	FieldTypes := strings.Split(fieldType, "(") //bytes.Split(value, []byte("(")) ////float(2) float格式
+	if len(FieldTypes) == 2 {                   //float(2) float格式处理
+		FieldType = FieldTypes[0]
+		precstr := strings.Split(FieldTypes[1], ")")[0]
+		var err error
+		prec, err = strconv.Atoi(precstr)
+		if err != nil {
+			FieldType = ""
+			prec = 0
+			return
+		}
 	}
 	return
 }
@@ -150,24 +199,6 @@ func (t *TableInfo) FieldChByte(field, value string) (r []byte) {
 	return t.TypeChByte(filedtype, value)
 }
 
-//将字段[]byte数据数组转换为字符串
-func (t *TableInfo) ByteChString(FieldType string, val []byte) (r string) {
-	switch FieldType {
-	case "int":
-		ir := BytesToInt(val)
-		r = strconv.Itoa(ir)
-	case "int64":
-		ir := BytesToInt64(val)
-		r = strconv.FormatInt(ir, 10)
-	case "float":
-		ir := ByteToFloat64(val)
-		r = strconv.FormatFloat(ir, 'f', 2, 64) //2,2位小数点
-	default:
-		r = string(val)
-	}
-	return
-}
-
 //将表字段[]byte数据数组转换为字符串数组
 func (t *TableInfo) ValsChString(vals [][]byte) (r []string) {
 	cs := ""
@@ -178,18 +209,32 @@ func (t *TableInfo) ValsChString(vals [][]byte) (r []string) {
 	return
 }
 
-/*
 //将包括分隔符的数据转义
-func (t *TableInfo) SplitToCh(k []byte) (r []byte) {
+func SplitToCh(k []byte) (r []byte) {
 	r = bytes.Replace(k, []byte(Split), []byte(ChSplit), -1)
 	r = bytes.Replace(r, []byte(IdxSplit), []byte(ChIdxSplit), -1)
 	return
 }
 
+//将记录分解并将转义数据恢复
+//由于int，float转byte，会占用所有的特殊字符
+//添加时的“转义”只是标识，SplitRd根据标识转换，才能得到正确的结果。
+func SplitRd(Rd []byte) (r [][]byte) {
+	csp := "[fgf0]"
+	csp1 := "[fgf1]"
+	rds := bytes.Replace(Rd, []byte(ChSplit), []byte(csp), -1)
+	rds = bytes.Replace(rds, []byte(ChIdxSplit), []byte(csp1), -1)
+	r = bytes.Split(rds, []byte(Split))
+	for i, v := range r {
+		r[i] = bytes.Replace(v, []byte(csp), []byte(ChSplit), -1)        //ChToSplit(v)
+		r[i] = bytes.Replace(r[i], []byte(csp1), []byte(ChIdxSplit), -1) //ChToSplit(v)
+	}
+	return
+}
+
 //将包括分隔符的转义数据恢复
-func (t *TableInfo) ChToSplit(k []byte) (r []byte) {
+func ChToSplit(k []byte) (r []byte) {
 	r = bytes.Replace(k, []byte(ChSplit), []byte(Split), -1)
 	r = bytes.Replace(r, []byte(ChIdxSplit), []byte(IdxSplit), -1)
 	return
 }
-*/

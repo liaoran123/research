@@ -1,7 +1,7 @@
 package routers
 
 import (
-	"bytes"
+	"fmt"
 	"research/xbdb"
 )
 
@@ -20,9 +20,12 @@ func toRAM(tbd *xbdb.TbData) {
 	var key [][]byte
 	var artid, fid int
 	for _, v := range tbd.Rd {
-		key = bytes.Split(v, []byte(xbdb.Split))
+		key = Table["art"].Split(v) //bytes.Split(v, []byte(xbdb.Split))
 		artid = xbdb.BytesToInt(key[0])
 		fid = xbdb.BytesToInt(key[2])
+		if fid == 0 {
+			fmt.Println(fid)
+		}
 		Artfid[uint32(artid)] = uint32(fid)
 	}
 }

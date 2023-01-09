@@ -1,18 +1,26 @@
 package pubgo
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 //---统计每天流量
 var Tj *tongji
 
 type tongji struct {
 	Tjs map[string]*daybws
+	mu  sync.RWMutex
 }
 
 func Newtongji() *tongji {
-	return &tongji{map[string]*daybws{}}
+	return &tongji{
+		Tjs: map[string]*daybws{},
+	}
 }
 func (t *tongji) Brows(dir string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if dir == "" {
 		dir = "home"
 	}

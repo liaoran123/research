@@ -61,15 +61,12 @@ func (t *Table) Act(vals [][]byte, Act string) (r ReInfo) {
 			"delete": t.del,
 		}
 	}
+	/* 没有的字段即是空值0值，故而不需要判断
 	if len(vals) < len(t.Ifo.Fields) {
 		r.Info = "字段参数长短不匹配！"
 		return
 	}
-	/*
-		//转义
-		for i := 0; i < len(vals); i++ {
-			vals[i] = t.Ifo.SplitToCh(vals[i])
-		}*/
+	*/
 	r = t.ActPK(vals, Act)
 	if !r.Succ {
 		return
@@ -156,11 +153,28 @@ func (t *Table) StrToByte(params map[string]string) (r [][]byte) {
 //将记录转换为map
 func (t *Table) RDtoMap(Rd []byte) (r map[string]string) {
 	r = make(map[string]string, len(t.Ifo.Fields))
-	vs := bytes.Split(Rd, []byte(Split))
+	vs := t.Split(Rd)
 	for i, v := range vs {
-		r[t.Ifo.Fields[i]] = t.Ifo.ByteChString(t.Ifo.FieldType[i], v)
+		r[t.Ifo.Fields[i]] = t.Ifo.ByteChString(t.Ifo.FieldType[i], v) //将包括分隔符的转义数据恢复
 	}
 	return
+}
+
+//将记录分开并转义数据恢复
+func (t *Table) Split(Rd []byte) (r [][]byte) {
+	r = SplitRd(Rd)
+	return
+	/*
+		csp := "[fgf0]"
+		csp1 := "[fgf1]"
+		rds := bytes.Replace(Rd, []byte(ChSplit), []byte(csp), -1)
+		rds = bytes.Replace(rds, []byte(ChIdxSplit), []byte(csp1), -1)
+		r = bytes.Split(rds, []byte(Split))
+		for i, v := range r {
+			r[i] = bytes.Replace(v, []byte(csp), []byte(ChSplit), -1)      //ChToSplit(v)
+			r[i] = bytes.Replace(r[i], []byte(csp1), []byte(IdxSplit), -1) //ChToSplit(v)
+		}*/
+
 }
 
 var Bufpool = sync.Pool{
@@ -191,7 +205,7 @@ func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) 
 			continue
 		}
 		r.WriteString("{")
-		value = bytes.Split(v, []byte(Split))
+		value = t.Split(v) //bytes.Split(v, []byte(Split))
 		for i, fv := range Ifo.FieldType {
 			switch fv {
 			case "string":

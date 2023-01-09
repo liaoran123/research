@@ -70,27 +70,32 @@
                         },
                         success: function (result) {
                             console.log(result)
+                            var carr=result.result                           
+                            
                             // $("#fidname").html(result.title) //result.name目录名称
                             // $("#fcata").attr("href", "/admin/cata/?id=" + result.fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。
-                            var chtml = ""
+                            
                             /*result.Catainfo，子目录信息数组
                             fid,父id
                             id，目录id
                             name，目录名称
                             */
                             //组织子目录列表html
-                            if (result == null) {//没有子目录
+                            if (carr == null) {//没有子目录
                                 $("#catas").html("无")
                                 return
                             }
-                            for (let index = 0; index < result.length; index++) {
-                                const element = result[index];
+                            var chtml = ""
+                           
+                            for (let index = 0; index < carr.length; index++) {
+                                const element = carr[index];
                                 if (element.title == "") {//title==""，逻辑上删除的目录。目录不会物理删除。
                                     continue
                                 }
                                 chtml += '<div class="panel-heading"><a href="?id=' + element.id + '"><b>' + element.title + '</b></a> <a href="#insert" data-id="' + element.id + '" data-fid="' + element.fid + '" data-name="' + element.title +  '" data-isleaf="' + element.isleaf + '" onclick="tianchong(this)"><span  class="label label-default">填充输入框</span></a></div>'
                             }
                             $("#catas").html(chtml)
+                            
 
                         }
                     });
@@ -106,10 +111,9 @@
                             id: $("#fid").val()
                         },
                         success: function (result) {                            
-                            console.log(result)
-                            //console.log(result[0].title)
-                            $("#fidname").html(result[0].title) //result.name目录名称                            
-                            $("#fcata").attr("href", "/admin/cata/?id=" + result[0].fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。                           
+                            console.log(result)                            
+                            $("#fidname").html(result.result[0].title) //result.name目录名称                            
+                            $("#fcata").attr("href", "/admin/cata/?id=" + result.result[0].fid)//result.fid是result.name的fid(父级id)，以作返回上级目录用。                           
                         }
                     });
                 }

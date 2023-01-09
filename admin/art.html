@@ -58,11 +58,11 @@
                             },
                             success: function (result) {
                                 console.log(result)
-                                $("#title").val(result[0].title)
-                                $("#text").val(result[0].text)
-                                $("#split").val(result[0].split)
-                                $("#fid").val(result[0].fid)
-                                $("#url").val(result[0].url)
+                                $("#title").val(result.result[0].title)
+                                $("#text").val(result.result[0].text)
+                                $("#split").val(result.result[0].split)
+                                $("#fid").val(result.result[0].fid)
+                                $("#url").val(result.result[0].url)
                             },
                             error: function (xhr) {
                                 alert("错误提示： " + xhr.status + " " + xhr.statusText);

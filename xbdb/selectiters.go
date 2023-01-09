@@ -88,6 +88,9 @@ func KVToRd(k, v []byte) (r []byte) {
 	//索引：k=ca,fid-3-7 v=    得到:3-7-  (后面是空值)
 	//主键: k=ca-1 v=ddd-ccdd-fff 得到:1-ddd-ccdd-fff
 	ks = ks[1:]
+	for i, v := range ks { //转义
+		ks[i] = SplitToCh(v)
+	}
 	r = JoinBytes(bytes.Join(ks, []byte(Split)), []byte(Split), v)
 	return
 }

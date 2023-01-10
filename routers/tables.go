@@ -36,7 +36,7 @@ func upd(name string, vals [][]byte) (r xbdb.ReInfo) {
 }
 
 //删除一条表记录
-func delete(tbname, id string) (r xbdb.ReInfo) {
+func deleteRd(tbname, id string) (r xbdb.ReInfo) {
 	bid := Table[tbname].Ifo.TypeChByte(Table[tbname].Ifo.FieldType[0], id)
 	r = Table[tbname].Delete(bid)
 	return

@@ -15,6 +15,6 @@ func catadelete(w http.ResponseWriter, req *http.Request) {
 	}
 	tbname := "ca"
 	id := params["id"]
-	r := delete(tbname, id)
+	r := deleteRd(tbname, id)
 	json.NewEncoder(w).Encode(r)
 }

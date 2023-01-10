@@ -18,7 +18,7 @@ func artdelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	id := params["id"]
-	r := delete("art", id)
+	r := deleteRd("art", id)
 	if !r.Succ {
 		json.NewEncoder(w).Encode(r)
 		return

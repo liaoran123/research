@@ -12,9 +12,6 @@ func (t *Table) Insert(vals [][]byte) (r ReInfo) {
 		}
 		vals[0] = t.Ifo.TypeChByte("int", t.Ac.GetidStr())
 	}
-	for i, v := range vals { //转义
-		vals[i] = SplitToCh(v)
-	}
 	r = t.Act(vals, "insert")
 	return
 }

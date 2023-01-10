@@ -206,6 +206,9 @@ func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) 
 		}
 		r.WriteString("{")
 		value = t.Split(v) //bytes.Split(v, []byte(Split))
+		if len(value) > len(Ifo.FieldType) {
+			break
+		}
 		for i, fv := range Ifo.FieldType {
 			switch fv {
 			case "string":

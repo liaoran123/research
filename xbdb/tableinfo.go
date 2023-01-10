@@ -116,8 +116,35 @@ func (t *TableInfo) Del(name string) (r ReInfo) {
 	return
 }
 
-//将字段类型数据转换为对应的[]byte数据数组
+//将字段类型数据转换为对应的[]byte数据数组，并且转义
 func (t *TableInfo) TypeChByte(fieldType, Fieldvalue string) (r []byte) {
+	r = t.FieldTypeChByte(fieldType, Fieldvalue, true)
+	/*
+		FieldType := fieldType
+		if strings.Contains(FieldType, "float") { //float(2),float的格式
+			FieldType = "float"
+		}
+		switch FieldType {
+		case "int":
+			iv, _ := strconv.Atoi(Fieldvalue)
+			r = IntToBytes(iv)
+		case "int64":
+			iv, _ := strconv.Atoi(Fieldvalue)
+			r = Int64ToBytes(int64(iv))
+		case "float":
+			fv, _ := strconv.ParseFloat(Fieldvalue, 64) //只能转Float64
+			r = Float64ToByte(fv)
+
+		default:
+			r = []byte(Fieldvalue)
+		}
+		r = SplitToCh([]byte(r)) //转义
+	*/
+	return
+}
+
+//将字段类型数据转换为对应的[]byte数据数组，ChSplit是否进行转义
+func (t *TableInfo) FieldTypeChByte(fieldType, Fieldvalue string, ChSplit bool) (r []byte) {
 	FieldType := fieldType
 	if strings.Contains(FieldType, "float") { //float(2),float的格式
 		FieldType = "float"
@@ -136,7 +163,9 @@ func (t *TableInfo) TypeChByte(fieldType, Fieldvalue string) (r []byte) {
 	default:
 		r = []byte(Fieldvalue)
 	}
-	r = SplitToCh([]byte(r)) //转义
+	if ChSplit {
+		r = SplitToCh([]byte(r)) //转义
+	}
 	return
 }
 

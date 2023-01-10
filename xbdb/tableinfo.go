@@ -164,7 +164,6 @@ func (t *TableInfo) ByteChString(fieldType string, val []byte) (r string) {
 	default:
 		r = string(val)
 	}
-	r = string(SplitToCh([]byte(r))) //转义
 	return
 }
 

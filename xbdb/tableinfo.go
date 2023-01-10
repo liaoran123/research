@@ -119,7 +119,7 @@ func (t *TableInfo) Del(name string) (r ReInfo) {
 //将字段类型数据转换为对应的[]byte数据数组，并且转义
 //所有添加、删除、修改的入口值都必须经过这个转换。
 //查询的字段如果包含分隔符，也需要进行此转换及转义。如email字段，否则查询结果不正确
-//查询、添加、删除、修改都进行该转换，则可保证数据正确。
+//查询、添加、删除、修改都进行该转换，则可保证数据正确、准确。
 func (t *TableInfo) TypeChByte(fieldType, Fieldvalue string) (r []byte) {
 	r = t.FieldTypeChByte(fieldType, Fieldvalue, true)
 	/*

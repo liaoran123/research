@@ -46,6 +46,7 @@ func Search(w http.ResponseWriter, req *http.Request) {
 			} else {
 				ok = false
 				fmt.Println("错误的定位页p,ps：", p, ps)
+				fmt.Println("kw=" + params["kw"])
 			}
 		} else {
 			ok = false

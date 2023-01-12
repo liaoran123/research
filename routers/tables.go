@@ -45,7 +45,7 @@ func deleteRd(tbname, id string) (r xbdb.ReInfo) {
 //获取表的一条记录
 func getonerecord(tbname, idxfield, id string, w http.ResponseWriter) {
 	idxvalue := Table[tbname].Ifo.FieldChByte(idxfield, id)
-	tbd := Table[tbname].Select.OneRecord(idxvalue)
+	tbd := Table[tbname].Select.Record(idxvalue)
 	if tbd == nil {
 		return
 	}

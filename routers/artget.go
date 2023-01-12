@@ -17,7 +17,7 @@ func artget(w http.ResponseWriter, req *http.Request) {
 	//getonerecord(tbname, idxfield, params["id"], w)
 	//打开文章表
 	idxvalue := Table[tbname].Ifo.FieldChByte(idxfield, params["id"])
-	tdb := Table[tbname].Select.OneRecord(idxvalue)
+	tdb := Table[tbname].Select.Record(idxvalue)
 	if tdb == nil {
 		return
 	}

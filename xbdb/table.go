@@ -242,6 +242,7 @@ func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) 
 	return
 }
 
+/*
 //根据主键获取表的一条记录（获取一个key的values）
 func (t *Table) Record(PKvalue string) (r *TbData) { //GetOneRecord
 	key := t.Ifo.FieldChByte(t.Ifo.Fields[0], PKvalue)
@@ -272,3 +273,4 @@ func (t *Table) RecordRand(bpk, epk string) (r *TbData) {
 	r = t.Select.FindRand(JoinBytes(pfx, bid), JoinBytes(pfx, eid), true, 0, -1)
 	return
 }
+*/

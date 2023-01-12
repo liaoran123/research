@@ -248,8 +248,15 @@ func (s *Select) GetIdxPrefixKey(idxfield, idxvalue, pkvalue []byte) (r []byte) 
 	return
 }
 
+/*
 //根据主键获取表的一条记录（获取一个key的values）
 func (s *Select) OneRecord(PKvalue []byte) (r *TbData) { //GetOneRecord
+	r = s.Record(PKvalue)
+	return
+}
+*/
+//根据主键获取表的一条记录（获取一个key的values）
+func (s *Select) Record(PKvalue []byte) (r *TbData) { //GetOneRecord
 	key := s.GetPkKey(PKvalue)
 	value := s.GetValue(key)
 	if len(value) == 0 {
@@ -257,6 +264,29 @@ func (s *Select) OneRecord(PKvalue []byte) (r *TbData) { //GetOneRecord
 	}
 	r = TbDatapool.Get().(*TbData)
 	r.Rd = append(r.Rd, KVToRd(key, value))
+	return
+
+}
+
+//根据主键获取表的一条记录（获取一个key的values）
+func (s *Select) Records(PKids [][]byte) (r *TbData) {
+	var value []byte
+	r = TbDatapool.Get().(*TbData)
+	for _, v := range PKids {
+		value = s.GetValue(v)
+		if len(value) == 0 {
+			continue
+		}
+		r.Rd = append(r.Rd, KVToRd(v, value))
+	}
+	return
+}
+
+//根据主键区间获取表的区间记录
+func (s *Select) RecordRand(bpk, epk []byte) (r *TbData) {
+	bid := s.GetPkKey(bpk) //t.Ifo.FieldChByte(t.Ifo.Fields[0], bpk)
+	eid := s.GetPkKey(epk) //t.Ifo.FieldChByte(t.Ifo.Fields[0], epk)
+	r = s.FindRand(bid, eid, true, 0, -1)
 	return
 }
 
@@ -380,7 +410,7 @@ func (s *Select) WhereIdxLikeFun(fieldname, value []byte, asc bool, f func(rd []
 //b，开始记录，count，返回条数
 func (s *Select) WherePK(value []byte) (r *TbData) { //GetTableRecordForIdx
 	key := s.GetPkKey(value)
-	r = s.OneRecord(key)
+	r = s.Record(key)
 	return
 }
 

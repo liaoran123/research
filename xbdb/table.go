@@ -213,7 +213,7 @@ func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) 
 		}
 		for i, fv := range Ifo.FieldType {
 			switch fv {
-			case "string":
+			case "string", "time":
 				jsonstr = "\"" + Ifo.Fields[i] + "\":" + strconv.Quote(string(value[i])) //strconv.Quote自动加字符串号
 			default:
 				iv := Ifo.ByteChString(Ifo.FieldType[i], value[i])

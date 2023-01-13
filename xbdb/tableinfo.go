@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -122,27 +123,6 @@ func (t *TableInfo) Del(name string) (r ReInfo) {
 //查询、添加、删除、修改都进行该转换，则可保证数据正确、准确。
 func (t *TableInfo) TypeChByte(fieldType, Fieldvalue string) (r []byte) {
 	r = t.FieldTypeChByte(fieldType, Fieldvalue, true)
-	/*
-		FieldType := fieldType
-		if strings.Contains(FieldType, "float") { //float(2),float的格式
-			FieldType = "float"
-		}
-		switch FieldType {
-		case "int":
-			iv, _ := strconv.Atoi(Fieldvalue)
-			r = IntToBytes(iv)
-		case "int64":
-			iv, _ := strconv.Atoi(Fieldvalue)
-			r = Int64ToBytes(int64(iv))
-		case "float":
-			fv, _ := strconv.ParseFloat(Fieldvalue, 64) //只能转Float64
-			r = Float64ToByte(fv)
-
-		default:
-			r = []byte(Fieldvalue)
-		}
-		r = SplitToCh([]byte(r)) //转义
-	*/
 	return
 }
 
@@ -162,7 +142,11 @@ func (t *TableInfo) FieldTypeChByte(fieldType, Fieldvalue string, ChSplit bool) 
 	case "float":
 		fv, _ := strconv.ParseFloat(Fieldvalue, 64) //只能转Float64
 		r = Float64ToByte(fv)
-
+	case "time":
+		if Fieldvalue == "" { //time类型空值，则表示获取服务器当时时间
+			Fieldvalue = time.Now().String() //strings.Split(time.Now().String(), ".")[0]
+		}
+		r = []byte(Fieldvalue)
 	default:
 		r = []byte(Fieldvalue)
 	}

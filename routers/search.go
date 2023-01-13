@@ -19,6 +19,7 @@ func Search(w http.ResponseWriter, req *http.Request) {
 
 	params := getparas(req)
 	tbname := "c"
+	params["kw"] = Sublen(params["kw"], 35) //最大长度35
 	Se := NewSeExefunc(tbname, params["kw"], params["dir"], 21)
 	asc := params["asc"] == "" //params["asc"]默认空值即true
 	p := params["p"]

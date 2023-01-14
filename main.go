@@ -38,6 +38,8 @@ func addrouters() {
 	http.HandleFunc("/api/art/item/", routers.Artitem)      //获取目录下的文章列表
 	http.HandleFunc("/api/art/meta/", routers.Meta)         //获取文章摘录
 	http.HandleFunc("/api/idxfindpfx/", routers.Idxfindpfx) //搜索词为前缀的相关词
+
+	http.HandleFunc("/test", routers.Test) //搜索词为前缀的相关词
 }
 
 //运行服务

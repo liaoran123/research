@@ -178,7 +178,7 @@ func (e *SeExefunc) exsit() (find bool) {
 		}
 		//find = find && strings.Contains(secstr, Sublen(e.ks[i], 7)) //精准查询
 	}
-	if fc > len(e.ks)/2+1 { //存在一半以上即当为匹配
+	if fc >= len(e.ks)/2+1 { //存在一半以上即当为匹配
 		find = true
 	}
 	return

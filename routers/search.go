@@ -24,6 +24,7 @@ func Search(w http.ResponseWriter, req *http.Request) {
 	asc := params["asc"] == "" //params["asc"]默认空值即true
 	p := params["p"]
 	ok := false
+
 	var key []byte
 	var iter iterator.Iterator
 	if p == "" {
@@ -100,6 +101,7 @@ func NewSeExefunc(tbname, kw, dir string, count int) *SeExefunc {
 	ks := strings.Split(kw, " ") //用空格来判断组合查询
 	//获取字数最长的词，通常字数最长的就是数据量最少的词。以该词作为组合查询的遍历定位词。
 	mkw := getMaxLenKw(ks)
+	//maxkeylen := int(ConfigMap["maxkeylen"].(float64))
 	mkw = Sublen(mkw, 7) //搜索词最大长度是7
 	return &SeExefunc{
 		tbname: tbname,

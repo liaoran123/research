@@ -81,6 +81,16 @@ func (i *Iters) ForDataFun(f func(rd []byte) bool) {
 	//fmt.Println("跟踪执行次数:", loop) //跟踪执行次数
 }
 
+//遍历累计记录数
+func (i *Iters) ForDataCount() (r int) {
+	for i.ok {
+		r++
+		i.ok = itermove[i.asc](i.iter)
+	}
+	i.iter.Release()
+	return
+}
+
 //将key、value组合一个完整的记录
 func KVToRd(k, v []byte) (r []byte) {
 	ks := SplitRd(k) //bytes.Split(k, []byte(Split))

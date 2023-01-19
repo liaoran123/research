@@ -137,6 +137,16 @@ func (s *Select) ForRD(asc bool, b, count int) (r *TbData) {
 	return
 }
 
+//统计表的记录数
+func (s *Select) Count() (r int) {
+	iter, ok := s.IterPrefixMove([]byte(s.Tbname+Split), true)
+	if !ok {
+		return
+	}
+	r = NewIters(iter, ok, true, 0, -1).ForDataCount()
+	return
+}
+
 /*
 遍历表所有
 */
@@ -165,6 +175,24 @@ func (s *Select) FindPrefixFun(key []byte, asc bool, f func(rd []byte) bool) {
 		return
 	}
 	NewIters(iter, ok, asc, 0, -1).ForDataFun(f)
+}
+
+//前缀遍历,统计记录数
+func (s *Select) FindIDXCount(fieldname, fieldvalue []byte) (r int) {
+	key := s.GetIdxPrefix(fieldname, fieldvalue)
+	iter, ok := s.IterPrefixMove(key, true)
+	if !ok {
+		return
+	}
+	r = NewIters(iter, ok, true, 0, -1).ForDataCount()
+	return
+}
+
+//根据前缀判断是否存在数据
+func (s *Select) FindIDXExist(fieldname, fieldvalue []byte) (r bool) {
+	key := s.GetIdxPrefix(fieldname, fieldvalue)
+	_, r = s.IterPrefixMove(key, true)
+	return
 }
 
 /*
@@ -248,13 +276,96 @@ func (s *Select) GetIdxPrefixKey(idxfield, idxvalue, pkvalue []byte) (r []byte) 
 	return
 }
 
+//一条组合索引key，GetIdxPrefixKey是一个值，GetIdxsPrefixKey是的多个值
+func (s *Select) GetIdxsPrefixKey(idxfield, idxvalue [][]byte, pkvalue []byte) (r []byte) {
+	bIdxSplit := []byte(IdxSplit)                //索引拼接分隔符
+	idxfields := bytes.Join(idxfield, bIdxSplit) //只需将多个值拼接起来即可
+	idxvalues := bytes.Join(idxvalue, bIdxSplit) //只需将多个值拼接起来即可
+	r = s.GetIdxPrefixKey(idxfields, idxvalues, pkvalue)
+	//bSplit := []byte(Split)
+	//r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfields, bSplit, idxvalues, bSplit, pkvalue)
+	return
+}
+
 /*
+//一条索引key
+func (s *Select) GetIdxPrefixKey(idxfield, idxvalue, pkvalue []byte) (r []byte) {
+	idxfields := bytes.Split(idxfield, []byte(","))
+	idxvalues := bytes.Split(idxvalue, []byte(","))
+	r = s.GetIdxsPrefixKey(pkvalue, idxfields, idxvalues)
+	return
+}
+*/
+
+/*
+
+//一条组合索引key，GetIdxPrefixKey是一个值，GetIdxsPrefixKey是的多个值
+func (s *Select) GetIdxsPrefixKey(pkvalue []byte, idxfields, idxvalues [][]byte) (r []byte) {
+	bSplit := []byte(Split)
+	bIdxSplit := []byte(IdxSplit) //索引拼接分隔符
+	flen, ilen := len(idxfields), len(idxvalues)
+	if flen != ilen {
+		return
+	}
+	var idxfield, idxvalue []byte
+	for i := 0; i < ilen; i++ {
+		idxfield = idxfields[i] //JoinBytes(idxfields[i])
+		idxvalue = idxvalues[i] //JoinBytes(idxvalues[i])
+		if i != ilen-1 {
+			idxfield = JoinBytes(idxfield, bIdxSplit)
+			idxvalue = JoinBytes(idxvalue, bIdxSplit)
+		}
+	}
+	r = JoinBytes([]byte(s.Tbname), bIdxSplit, idxfield, bSplit, idxvalue, bSplit, pkvalue)
+	return
+}
+
+
+//一条组合索引key
+func (s *Select) GetIdxsPrefixKey(pkvalue []byte, idxfields, idxvalues [][]byte) (r []byte) {
+	bSplit := []byte(Split)
+	flen, ilen := len(idxfields), len(idxvalues)
+	if flen != ilen {
+		return
+	}
+	var idxfield, idxvalue []byte
+	for i := 0; i < ilen; i++ {
+		idxfield = idxfields[i] //JoinBytes(idxfields[i])
+		idxvalue = idxvalues[i] //JoinBytes(idxvalues[i])
+		if i != ilen-1 {
+			idxfield = JoinBytes(idxfield, []byte(IdxSplit))
+			idxvalue = JoinBytes(idxvalue, []byte(IdxSplit))
+		}
+	}
+	r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfield, bSplit, idxvalue, bSplit, pkvalue)
+	return
+}
+
+
 //根据主键获取表的一条记录（获取一个key的values）
 func (s *Select) OneRecord(PKvalue []byte) (r *TbData) { //GetOneRecord
 	r = s.Record(PKvalue)
 	return
 }
 */
+
+//索引前缀，等于索引idxvalue
+func (s *Select) GetIdxPrefix(idxfield, idxvalue []byte) (r []byte) {
+	r = s.GetIdxPrefixKey(idxfield, idxvalue, []byte{}) //只需通过GetIdxPrefixKey，提供一个nil的pkvalue即可。
+	/*
+		bSplit := []byte(Split)
+		r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfield, bSplit, idxvalue, bSplit)
+	*/
+	return
+}
+
+//索引前缀，索引idxvalue也前缀匹配。即是sql的like语句
+func (s *Select) GetIdxPrefixLike(idxfield, idxvalue []byte) (r []byte) {
+	r = s.GetIdxPrefix(idxfield, idxvalue)
+	r = bytes.Trim(r, Split)
+	return
+}
+
 //根据主键获取表的一条记录（获取一个key的values）
 func (s *Select) Record(PKvalue []byte) (r *TbData) { //GetOneRecord
 	key := s.GetPkKey(PKvalue)
@@ -287,44 +398,6 @@ func (s *Select) RecordRand(bpk, epk []byte) (r *TbData) {
 	bid := s.GetPkKey(bpk) //t.Ifo.FieldChByte(t.Ifo.Fields[0], bpk)
 	eid := s.GetPkKey(epk) //t.Ifo.FieldChByte(t.Ifo.Fields[0], epk)
 	r = s.FindRand(bid, eid, true, 0, -1)
-	return
-}
-
-//索引前缀，等于索引idxvalue
-func (s *Select) GetIdxPrefix(idxfield, idxvalue []byte) (r []byte) {
-	bSplit := []byte(Split)
-	r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfield, bSplit, idxvalue, bSplit)
-	return
-}
-
-//索引前缀，索引idxvalue也前缀匹配。即是sql的like语句
-func (s *Select) GetIdxPrefixLike(idxfield, idxvalue []byte) (r []byte) {
-	r = s.GetIdxPrefix(idxfield, idxvalue)
-	r = bytes.Trim(r, Split)
-	/*
-		bSplit := []byte(Split)
-		r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfield, bSplit, idxvalue)
-	*/
-	return
-}
-
-//一条组合索引key
-func (s *Select) GetIdxsPrefixKey(pkvalue []byte, idxfields, idxvalues [][]byte) (r []byte) {
-	bSplit := []byte(Split)
-	flen, ilen := len(idxfields), len(idxvalues)
-	if flen != ilen {
-		return
-	}
-	var idxfield, idxvalue []byte
-	for i := 0; i < ilen; i++ {
-		idxfield = JoinBytes(idxfields[i])
-		idxvalue = JoinBytes(idxvalues[i])
-		if i != ilen-1 {
-			idxfield = JoinBytes(idxfield, []byte(IdxSplit))
-			idxvalue = JoinBytes(idxvalue, []byte(IdxSplit))
-		}
-	}
-	r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfield, bSplit, idxvalue, bSplit, pkvalue)
 	return
 }
 

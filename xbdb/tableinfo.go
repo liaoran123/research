@@ -165,7 +165,7 @@ func (t *TableInfo) FieldTypeChByte(fieldType, Fieldvalue string, ChSplit bool) 
 		r = Float64ToByte(fv)
 	case "time":
 		if Fieldvalue == "" { //time类型空值，则表示获取服务器当时时间
-			Fieldvalue = time.Now().String() //strings.Split(time.Now().String(), ".")[0]
+			Fieldvalue = strings.Split(time.Now().String(), ".")[0] //time.Now().String() //
 		}
 		r = []byte(Fieldvalue)
 	default:

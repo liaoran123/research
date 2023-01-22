@@ -39,7 +39,7 @@ func addrouters() {
 	http.HandleFunc("/api/art/meta/", routers.Meta)         //获取文章摘录
 	http.HandleFunc("/api/idxfindpfx/", routers.Idxfindpfx) //搜索词为前缀的相关词
 
-	http.HandleFunc("/test", routers.Test) //搜索词为前缀的相关词
+	http.HandleFunc("/test", routers.Test)
 }
 
 //运行服务

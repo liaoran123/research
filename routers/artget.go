@@ -56,10 +56,12 @@ type cexefun struct {
 
 func newcexefun() *cexefun {
 	tbname := "c"
+	r := bufpool.Get().(*bytes.Buffer)
+	r.Reset()
 	return &cexefun{
-		r:      bufpool.Get().(*bytes.Buffer),
+		r:      r, //  bufpool.Get().(*bytes.Buffer),
 		tbname: tbname,
-		bkey:   Table[tbname].Select.GetPkKeyLike([]byte("")), //获取前缀
+		bkey:   Table[tbname].Select.GetPkKey([]byte("")), //获取前缀
 	}
 }
 func (c *cexefun) addtext(rd []byte) bool {
@@ -67,7 +69,7 @@ func (c *cexefun) addtext(rd []byte) bool {
 		c.Loop++
 		return true
 	}
-	vs := bytes.Split(rd, []byte(xbdb.Split))
+	vs := Table[c.tbname].Split(rd) //bytes.Split(rd, []byte(xbdb.Split))
 	c.r.Write(vs[1])
 	//c.r.Write([]byte("\n"))
 	c.Loop++

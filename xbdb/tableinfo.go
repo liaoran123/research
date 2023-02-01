@@ -149,6 +149,10 @@ func (t *TableInfo) TypeChByte(fieldType, Fieldvalue string) (r []byte) {
 
 //将字段类型数据转换为对应的[]byte数据数组，ChSplit是否进行转义
 func (t *TableInfo) FieldTypeChByte(fieldType, Fieldvalue string, ChSplit bool) (r []byte) {
+	if Fieldvalue == "" { //空值直接返回
+		r = []byte{}
+		return
+	}
 	FieldType := fieldType
 	if strings.Contains(FieldType, "float") { //float(2),float的格式
 		FieldType = "float"
@@ -164,7 +168,7 @@ func (t *TableInfo) FieldTypeChByte(fieldType, Fieldvalue string, ChSplit bool) 
 		fv, _ := strconv.ParseFloat(Fieldvalue, 64) //只能转Float64
 		r = Float64ToByte(fv)
 	case "time":
-		if Fieldvalue == "" { //time类型空值，则表示获取服务器当时时间
+		if Fieldvalue == "now()" { //time类型空值，则表示获取服务器当时时间
 			Fieldvalue = strings.Split(time.Now().String(), ".")[0] //time.Now().String() //
 		}
 		r = []byte(Fieldvalue)
@@ -222,13 +226,23 @@ func floatch(fieldType string) (FieldType string, prec int) {
 }
 
 //根据获取字段对应的类型
-func (t *TableInfo) GetFieldType(idxfield string) (r string) {
+func (t *TableInfo) GetFieldType(idxfield string) string {
 	for i, v := range t.Fields {
 		if v == idxfield {
 			return t.FieldType[i]
 		}
 	}
-	return
+	return ""
+}
+
+//根据获取字段对应的类型和下标
+func (t *TableInfo) GetFieldTypes(idxfield string) (string, int) {
+	for i, v := range t.Fields {
+		if v == idxfield {
+			return t.FieldType[i], i
+		}
+	}
+	return "", -1
 }
 
 //将字段名称数据转换为对应的[]byte数据数组
@@ -257,6 +271,7 @@ func SplitToCh(k []byte) (r []byte) {
 //将记录分解并将转义数据恢复
 //由于int，float转byte，会占用所有的特殊字符
 //添加时的“转义”只是标识，SplitRd根据标识转换，才能得到正确的结果。
+//所有数据都要经过此函数，方能得到未转义前的正确数据。
 func SplitRd(Rd []byte) (r [][]byte) {
 	csp := "[fgf0]"
 	csp1 := "[fgf1]"

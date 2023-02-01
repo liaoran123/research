@@ -2,14 +2,20 @@
 //表信息
 package xbdb
 
+//根据getprefix.go和getiters.go，也即key和游标的各种组合。
+
 import (
 	"bytes"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
+/*查询执行流程，
+1，根据getprefix.go的表前缀规则获取key
+2，通过key配合getiters.go各个函数获取各种查询游标数据iters初始化（主要是按索引和主键查询和顺序和倒序）。
+3，根据itersfor.go进行各种遍历。
+*/
 type Select struct {
 	Db     *leveldb.DB
 	Tbname string
@@ -20,6 +26,7 @@ var (
 	itermove  map[bool]func(iter iterator.Iterator) bool //移动netx, prev
 )
 
+//下面四个函数为了动态的顺序和倒序的遍历游标
 func First(iter iterator.Iterator) bool {
 	return iter.First()
 }
@@ -48,64 +55,6 @@ func NewSelect(tbname string, db *leveldb.DB) *Select { //*leveldb.DB {
 	}
 }
 
-//空游标，整个数据库数据游标
-func (s *Select) Nil() (iter iterator.Iterator) {
-	iter = s.Db.NewIterator(nil, nil)
-	return
-}
-
-//前缀匹配数据游标
-func (s *Select) IterPrefix(key []byte) (iter iterator.Iterator) {
-	iter = s.Db.NewIterator(util.BytesPrefix([]byte(key)), nil)
-	return
-}
-
-//范围数据游标
-func (s *Select) IterRand(b, e []byte) (iter iterator.Iterator) {
-	iter = s.Db.NewIterator(&util.Range{Start: b, Limit: e}, nil)
-	return
-}
-
-//定位游标
-func (s *Select) IterSeekMove(key []byte) (iter iterator.Iterator, ok bool) {
-	iter = s.Nil()
-	ok = iter.Seek(key)
-	return
-}
-
-//前缀游标
-func (s *Select) IterPrefixMove(key []byte, asc bool) (iter iterator.Iterator, ok bool) { //Prefixiter
-	iter = s.IterPrefix(key)
-	if iter != nil {
-		ok = iterFixed[asc](iter)
-	}
-	return
-}
-
-//范围游标
-func (s *Select) IterRandMove(bkey, ekey []byte, asc bool) (iter iterator.Iterator, ok bool) {
-	iter = s.IterRand(bkey, ekey)
-	if iter != nil {
-		ok = iterFixed[asc](iter)
-	}
-	return
-}
-
-/*
-遍历数据库
-
-func (s *Select) ForDb(f func(rd []byte) bool) {
-	iter := s.Nil()
-	for iter.Next() {
-		if f(KVToRd(iter.Key(), iter.Value())) {
-		} else {
-			iter.Release()
-			return
-		}
-	}
-	iter.Release()
-}
-*/
 //遍历数据库，主要用于复制数据库
 func (s *Select) ForDbase(f func(k, v []byte) bool) {
 	iter := s.Nil()
@@ -119,27 +68,34 @@ func (s *Select) ForDbase(f func(k, v []byte) bool) {
 	iter.Release()
 }
 
-/*
-遍历表数据
-
-func (s *Select) ForData(f func(rd []byte) bool) {
-	s.FindPrefixFun([]byte(s.Tbname+Split), true, f)
+//遍历表所有，主要用于复制
+func (s *Select) ForTb(f func(k, v []byte) bool) {
+	iter := s.IterPrefix(s.GetTbLikeKey())
+	for iter.Next() {
+		if f(iter.Key(), iter.Value()) {
+		} else {
+			iter.Release()
+			return
+		}
+	}
+	iter.Release()
 }
-*/
-//遍历表数据
+
+//遍历表数据，执行函数为参数
 func (s *Select) ForRDFun(asc bool, f func(rd []byte) bool) {
-	s.FindPrefixFun([]byte(s.Tbname+Split), asc, f)
+	//s.FindPrefixFun([]byte(s.Tbname+Split), asc, f)
+	s.FindPrefixFun(s.GetTbKey(), asc, f)
 }
 
-//遍历表数据
+//获取表数据
 func (s *Select) ForRD(asc bool, b, count int) (r *TbData) {
-	r = s.FindPrefix([]byte(s.Tbname+Split), asc, b, count)
+	r = s.FindPrefix(s.GetTbKey(), asc, b, count)
 	return
 }
 
 //统计表的记录数
 func (s *Select) Count() (r int) {
-	iter, ok := s.IterPrefixMove([]byte(s.Tbname+Split), true)
+	iter, ok := s.IterPrefixMove(s.GetTbKey(), true)
 	if !ok {
 		return
 	}
@@ -147,11 +103,10 @@ func (s *Select) Count() (r int) {
 	return
 }
 
-/*
-遍历表所有
-*/
+//遍历表数据集
 func (s *Select) For(f func(rd []byte) bool) {
-	s.FindPrefixFun([]byte(s.Tbname), true, f)
+	//s.FindPrefixFun([]byte(s.Tbname), true, f)
+	s.FindPrefixFun(s.GetTbKey(), true, f)
 }
 
 /*
@@ -245,20 +200,6 @@ func (s *Select) GetValue(key []byte) (r []byte) {
 	return
 }
 
-//一条主键key
-func (s *Select) GetPkKey(pkvalue []byte) (r []byte) {
-	bSplit := []byte(Split)
-	r = JoinBytes([]byte(s.Tbname), bSplit, pkvalue)
-	return
-}
-
-//一条主键key，前缀匹配，仅当主键为字符串时有效
-func (s *Select) GetPkKeyLike(pkvalue []byte) (r []byte) {
-	r = s.GetPkKey(pkvalue)
-	r = bytes.Trim(r, Split)
-	return
-}
-
 //根据主键值获取表的一条记录value（获取一个key的value）
 func (s *Select) GetPKValue(fieldvalue []byte) (r []byte) { //GetRecord
 	key := s.GetPkKey(fieldvalue)
@@ -266,103 +207,6 @@ func (s *Select) GetPKValue(fieldvalue []byte) (r []byte) { //GetRecord
 		return
 	}
 	r = s.GetValue(key)
-	return
-}
-
-//一条索引key
-func (s *Select) GetIdxPrefixKey(idxfield, idxvalue, pkvalue []byte) (r []byte) {
-	bSplit := []byte(Split)
-	r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfield, bSplit, idxvalue, bSplit, pkvalue)
-	return
-}
-
-//一条组合索引key，GetIdxPrefixKey是一个值，GetIdxsPrefixKey是的多个值
-func (s *Select) GetIdxsPrefixKey(idxfield, idxvalue [][]byte, pkvalue []byte) (r []byte) {
-	bIdxSplit := []byte(IdxSplit)                //索引拼接分隔符
-	idxfields := bytes.Join(idxfield, bIdxSplit) //只需将多个值拼接起来即可
-	idxvalues := bytes.Join(idxvalue, bIdxSplit) //只需将多个值拼接起来即可
-	r = s.GetIdxPrefixKey(idxfields, idxvalues, pkvalue)
-	//bSplit := []byte(Split)
-	//r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfields, bSplit, idxvalues, bSplit, pkvalue)
-	return
-}
-
-/*
-//一条索引key
-func (s *Select) GetIdxPrefixKey(idxfield, idxvalue, pkvalue []byte) (r []byte) {
-	idxfields := bytes.Split(idxfield, []byte(","))
-	idxvalues := bytes.Split(idxvalue, []byte(","))
-	r = s.GetIdxsPrefixKey(pkvalue, idxfields, idxvalues)
-	return
-}
-*/
-
-/*
-
-//一条组合索引key，GetIdxPrefixKey是一个值，GetIdxsPrefixKey是的多个值
-func (s *Select) GetIdxsPrefixKey(pkvalue []byte, idxfields, idxvalues [][]byte) (r []byte) {
-	bSplit := []byte(Split)
-	bIdxSplit := []byte(IdxSplit) //索引拼接分隔符
-	flen, ilen := len(idxfields), len(idxvalues)
-	if flen != ilen {
-		return
-	}
-	var idxfield, idxvalue []byte
-	for i := 0; i < ilen; i++ {
-		idxfield = idxfields[i] //JoinBytes(idxfields[i])
-		idxvalue = idxvalues[i] //JoinBytes(idxvalues[i])
-		if i != ilen-1 {
-			idxfield = JoinBytes(idxfield, bIdxSplit)
-			idxvalue = JoinBytes(idxvalue, bIdxSplit)
-		}
-	}
-	r = JoinBytes([]byte(s.Tbname), bIdxSplit, idxfield, bSplit, idxvalue, bSplit, pkvalue)
-	return
-}
-
-
-//一条组合索引key
-func (s *Select) GetIdxsPrefixKey(pkvalue []byte, idxfields, idxvalues [][]byte) (r []byte) {
-	bSplit := []byte(Split)
-	flen, ilen := len(idxfields), len(idxvalues)
-	if flen != ilen {
-		return
-	}
-	var idxfield, idxvalue []byte
-	for i := 0; i < ilen; i++ {
-		idxfield = idxfields[i] //JoinBytes(idxfields[i])
-		idxvalue = idxvalues[i] //JoinBytes(idxvalues[i])
-		if i != ilen-1 {
-			idxfield = JoinBytes(idxfield, []byte(IdxSplit))
-			idxvalue = JoinBytes(idxvalue, []byte(IdxSplit))
-		}
-	}
-	r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfield, bSplit, idxvalue, bSplit, pkvalue)
-	return
-}
-
-
-//根据主键获取表的一条记录（获取一个key的values）
-func (s *Select) OneRecord(PKvalue []byte) (r *TbData) { //GetOneRecord
-	r = s.Record(PKvalue)
-	return
-}
-*/
-
-//索引前缀，等于索引idxvalue
-func (s *Select) GetIdxPrefix(idxfield, idxvalue []byte) (r []byte) {
-	r = s.GetIdxPrefixKey(idxfield, idxvalue, []byte{}) //只需通过GetIdxPrefixKey，提供一个nil的pkvalue即可。
-	/*
-		bSplit := []byte(Split)
-		r = JoinBytes([]byte(s.Tbname), []byte(IdxSplit), idxfield, bSplit, idxvalue, bSplit)
-	*/
-	return
-}
-
-//索引前缀，索引idxvalue也前缀匹配。即是sql的like语句
-func (s *Select) GetIdxPrefixLike(idxfield, idxvalue []byte) (r []byte) {
-	r = s.GetIdxPrefix(idxfield, idxvalue)
-	r = bytes.Trim(r, Split)
 	return
 }
 
@@ -374,20 +218,19 @@ func (s *Select) Record(PKvalue []byte) (r *TbData) { //GetOneRecord
 		return
 	}
 	r = TbDatapool.Get().(*TbData)
+	r.Release() //确保数据不混乱
 	r.Rd = append(r.Rd, KVToRd(key, value))
 	return
 
 }
 
-//根据主键获取表的一条记录（获取一个key的values）
+//根据多个主键获取表对应的多条记录
 func (s *Select) Records(PKids [][]byte) (r *TbData) {
 	var value []byte
 	r = TbDatapool.Get().(*TbData)
+	r.Release()
 	for _, v := range PKids {
 		value = s.GetValue(v)
-		if len(value) == 0 {
-			continue
-		}
 		r.Rd = append(r.Rd, KVToRd(v, value))
 	}
 	return
@@ -400,15 +243,6 @@ func (s *Select) RecordRand(bpk, epk []byte) (r *TbData) {
 	r = s.FindRand(bid, eid, true, 0, -1)
 	return
 }
-
-/*
-//根据索引获取索引记录列表
-func (s *Select) GetRecordsForIdx(idxname, idxvalue []byte, b, count int) (r *TbData) {
-	key := s.getIdxPrefix(idxname, idxvalue)
-	tbd = s.FindPrefix(key, true, b, count)
-	return
-}
-*/
 
 //根据索引记录列表返回表记录数据
 //b，开始记录，count，返回条数
@@ -437,13 +271,18 @@ func (s *Select) WhereIdxs(fieldname, value []byte, asc bool, b, count int, eq b
 		return
 	}
 	r = s.IdxsGetRecords(tbd)
+	tbd.Release()
 	return
 }
 
 //根据索引集合获取对应的记录集合
 func (s *Select) IdxsGetRecords(tbd *TbData) (r *TbData) {
 	var pkval, k []byte
-	r = TbDatapool.Get().(*TbData)
+	//r = TbDatapool.Get().(*TbData)
+	//同一个函数内不能同时使用2个get。
+	//因为tbd此时未释放，r = TbDatapool.Get()会将tbd偷走。
+	//这里需要用New()
+	r = TbDatapool.New().(*TbData)
 	for _, v := range tbd.Rd {
 		ks := bytes.Split(v, []byte(Split))
 		//可查看KVToRD()之后rd结构
@@ -454,7 +293,6 @@ func (s *Select) IdxsGetRecords(tbd *TbData) (r *TbData) {
 			r.Rd = append(r.Rd, JoinBytes(k, []byte(Split), pkval))
 		}
 	}
-	tbd.Release()
 	return
 }
 
@@ -479,18 +317,18 @@ func (s *Select) WhereIdxLikeFun(fieldname, value []byte, asc bool, f func(rd []
 	s.FindPrefixFun(key, asc, f)
 }
 
-//根据根据主键值获取数据
-//b，开始记录，count，返回条数
+/*
+//根据根据主键值获取一条数据
 func (s *Select) WherePK(value []byte) (r *TbData) { //GetTableRecordForIdx
-	key := s.GetPkKey(value)
-	r = s.Record(key)
+	//key := s.GetPkKey(value)
+	r = s.Record(value)
 	return
 }
-
+*/
 //根据根据主键值匹配获取数据，仅主键为字符串时有效
 //b，开始记录，count，返回条数
 func (s *Select) WherePKLike(value []byte, asc bool, b, count int) (r *TbData) { //GetTableRecordForIdx
-	key := s.GetPkKeyLike(value)
+	key := s.GetPkKey(value)
 	tbd := s.FindPrefix(key, asc, b, count)
 	if tbd == nil {
 		return
@@ -503,7 +341,7 @@ func (s *Select) WherePKLike(value []byte, asc bool, b, count int) (r *TbData) {
 //根据根据主键值匹配获取数据，仅主键为字符串时有效。执行函数为参数
 //b，开始记录，count，返回条数
 func (s *Select) WherePKLikeFun(value []byte, b, count int, asc bool, f func(rd []byte) bool) { //GetTableRecordForIdx
-	key := s.GetPkKeyLike(value)
+	key := s.GetPkKey(value)
 	s.FindPrefixFun(key, asc, f)
 }
 

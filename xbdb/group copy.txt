@@ -1,0 +1,57 @@
+//小白数据库
+
+package xbdb
+
+import (
+	"bytes"
+)
+
+//sql的Group语句
+type Group struct {
+	//intvalue   map[string]int
+	//int64value map[string]int64
+	floatvalue map[string]float64
+}
+
+func NewGroup() *Group {
+	return &Group{}
+}
+
+//Tbd.Rd第一个字段是要分组的字段，后面有多少个字段就是sum多少个
+func (s *Group) Sum(Tbd *TbData, fieldtypes []string) {
+	summap := make(map[string]func(string, []byte), 3)
+	summap["int"] = s.Sumint
+	summap["int64"] = s.Sumint64
+	summap["float64"] = s.Sumfloat64
+	var ks [][]byte
+	for _, v := range Tbd.Rd {
+		ks = bytes.Split(v, []byte(Split))
+		for i := 1; i < len(ks); i++ { //ks[0]是Group的字段，后面的都是要sum的字段，可以是多个
+			summap[fieldtypes[i]](string(ks[0]), ks[i])
+		}
+	}
+}
+
+/*
+func (s *Group) Sumint(fieldname string, fieldvalue []byte) {
+	if v, ok := s.intvalue[fieldname]; ok {
+		s.intvalue[fieldname] = v + BytesToInt(fieldvalue)
+	} else {
+		s.intvalue[fieldname] = BytesToInt(fieldvalue)
+	}
+
+}
+func (s *Group) Sumint64(fieldname string, fieldvalue []byte) {
+	if v, ok := s.int64value[fieldname]; ok {
+		s.int64value[fieldname] = v + BytesToInt64(fieldvalue)
+	} else {
+		s.int64value[fieldname] = BytesToInt64(fieldvalue)
+	}
+}*/
+func (s *Group) Sumfloat64(fieldname string, fieldvalue []byte) {
+	if v, ok := s.floatvalue[fieldname]; ok {
+		s.floatvalue[fieldname] = v + ByteToFloat64(fieldvalue)
+	} else {
+		s.floatvalue[fieldname] = ByteToFloat64(fieldvalue)
+	}
+}

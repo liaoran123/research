@@ -116,11 +116,12 @@ func NewSeExefunc(tbname, kw, dir string, count int) *SeExefunc {
 	}
 }
 func (e *SeExefunc) search(rd []byte) bool {
-	if time.Since(e.bt).Seconds() > 3 { //只要是控制组合查询超时时间
-		e.loop = 21 //以便用户点击下一页，分散时间进行搜索，缓解性能问题。
-		//fmt.Println("组合查询超时3秒。") //多次执行由于会加载内存，则可以完成。
-		return false
-	}
+	/*
+		if time.Since(e.bt).Seconds() > 3 { //只要是控制组合查询超时时间
+			e.loop = 21 //以便用户点击下一页，分散时间进行搜索，缓解性能问题。
+			//fmt.Println("组合查询超时3秒。") //多次执行由于会加载内存，则可以完成。
+			return false
+		}*/
 	if !strings.Contains(string(rd), e.mkw) {
 		return false //key不存在kw，即已经超过所需数据
 	}
@@ -153,15 +154,6 @@ func (e *SeExefunc) search(rd []byte) bool {
 	return e.loop < e.count
 }
 
-//解构rd，转为字符串。参照artpost.ArtSecToId组合规则
-/*
-func (e *SeExefunc) RdToString(rd []byte) {
-	e.keys = bytes.Split(rd, []byte(xbdb.Split))
-	e.artid, e.secid = IdToArtSec(string(e.keys[1]))
-	e.pos = xbdb.BytesToInt(e.keys[2])
-	e.lastkey = string(e.keys[1]) + xbdb.Split + strconv.Itoa(e.artid) + "+" + strconv.Itoa(e.secid) + xbdb.Split + strconv.Itoa(e.pos)
-}
-*/
 //组合查询
 func (e *SeExefunc) exsit() (find bool) {
 	if len(e.ks) < 2 {
@@ -201,9 +193,8 @@ func (e *SeExefunc) getartinfo() (r string) {
 
 //文章摘录
 func (e *SeExefunc) getartmeta() (r string) {
-
-	skid := ArtSecToId(e.artid, e.secid)                 //c表id的字符串
-	key := Table[e.tbname].Select.GetPkKey([]byte(skid)) //Table[e.tbname].Ifo.FieldChByte("id", skid)
+	skid := ArtSecToId(e.artid, e.secid)                                 //c表id的字符串
+	key := Table[e.tbname].Select.GetPkKey(xbdb.SplitToCh([]byte(skid))) //Table[e.tbname].Ifo.FieldChByte("id", skid)
 	iter, ok := Table[e.tbname].Select.IterSeekMove(key)
 	if !ok {
 		return

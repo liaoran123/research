@@ -20,7 +20,8 @@ func Meta(w http.ResponseWriter, req *http.Request) {
 	secid, _ := strconv.Atoi(params["secid"])
 	id := ArtSecToId(artid, secid)
 	//idxvalue := Table[tbname].Select.GetPkKey([]byte(id)) //Table[tbname].Ifo.FieldChByte(idxfield, id)
-	key := Table[tbname].Select.GetPkKey([]byte(id))
+	bid := xbdb.SplitToCh([]byte(id))
+	key := Table[tbname].Select.GetPkKey(bid)
 	ef := newmetaexefun(tbname)
 	ef.r.Write([]byte("{\"result\":["))
 	Table[tbname].Select.FindSeekFun(key, true, ef.addtext)
@@ -55,8 +56,7 @@ func newmetaexefun(tbname string) *metaexefun {
 
 //获取句子并累加，直到大于最大限制长度
 func (m *metaexefun) addtext(rd []byte) bool {
-	m.keys = bytes.Split(rd, []byte(xbdb.Split))
-
+	m.keys = Table[m.tbname].Split(rd) // bytes.Split(rd, []byte(xbdb.Split))
 	m.r.WriteString("{\"sec\":" + strconv.Quote(string(m.keys[1])) + "},")
 	//m.r.Write(m.keys[0])
 	return len(string(m.keys[1])) < m.len

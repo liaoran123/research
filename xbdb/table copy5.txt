@@ -11,8 +11,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-var actmap map[string]func(k, v []byte) (r ReInfo)
-
 //表的类
 type Table struct {
 	Name   string
@@ -53,21 +51,22 @@ func (t *Table) ForDisparte(nr string, ftlen int) (disparte []string) {
 	return
 }
 
+var actmap map[string]func(k, v []byte) (r ReInfo)
+
 //添加或删除一条记录，以及相关索引等所有数据
 func (t *Table) Act(vals [][]byte, Act string) (r ReInfo) {
-	return t.Acts(vals, Act, nil)
-}
-
-//添加或删除一条记录，以及相关索引等所有数据等事务
-//updatefield,修改时用。用于记录需要修改那个字段。与表字段一一对应。
-//修改某个某些字段时，updatefield作为判断，不用把所有索引都删除再重新添加，导致性能不高和不灵活。
-func (t *Table) Acts(vals [][]byte, Act string, updatefield []bool) (r ReInfo) {
 	if actmap == nil {
 		actmap = map[string]func(k, v []byte) (r ReInfo){
 			"insert": t.put,
 			"delete": t.del,
 		}
 	}
+	/* 没有的字段即是空值0值，故而不需要判断
+	if len(vals) < len(t.Ifo.Fields) {
+		r.Info = "字段参数长短不匹配！"
+		return
+	}
+	*/
 	r = t.ActPK(vals, Act)
 	if !r.Succ {
 		return
@@ -76,23 +75,17 @@ func (t *Table) Acts(vals [][]byte, Act string, updatefield []bool) (r ReInfo) {
 	idx := -1
 	var ivs []string
 	idxfields := ""
-	var idxval, idxvals []byte
+	var idxvals []byte
 	for _, iv := range t.Ifo.Idxs {
 		if iv == "" {
 			continue
 		}
 		ivs = strings.Split(iv, ",")
-		if updatefield != nil { //修改的情况
-			if !isUpdateField(ivs, updatefield) {
-				continue //不是修改字段则退出，不用添加或删除原有索引
-			}
-		}
 		for i := 0; i < len(ivs); i++ { //组织单个或组合索引key
 			idx, _ = strconv.Atoi(ivs[i])
-			idxval = vals[idx]
-			idxfields += t.Ifo.Fields[idx]       //累加
-			idxvals = JoinBytes(idxvals, idxval) //累加
-			if i != len(ivs)-1 {                 //不是末尾，则加分隔符
+			idxfields += t.Ifo.Fields[idx]
+			idxvals = JoinBytes(idxvals, vals[idx])
+			if i != len(ivs)-1 {
 				idxfields += IdxSplit
 				idxvals = JoinBytes(idxvals, []byte(IdxSplit))
 			}
@@ -101,7 +94,6 @@ func (t *Table) Acts(vals [][]byte, Act string, updatefield []bool) (r ReInfo) {
 		if !r.Succ {
 			return
 		}
-		//重置
 		idxfields = ""
 		idxvals = idxvals[:0]
 	}
@@ -113,11 +105,6 @@ func (t *Table) Acts(vals [][]byte, Act string, updatefield []bool) (r ReInfo) {
 			continue
 		}
 		idx, _ = strconv.Atoi(i)
-		if updatefield != nil { //修改的情况
-			if !updatefield[idx] { //非修改字段不添加/删除索引
-				continue
-			}
-		}
 		ftIdx = t.ForDisparte(string(vals[idx]), ftlen)
 		for p, f := range ftIdx {
 			t.ActIDX([]byte(t.Ifo.Fields[idx]), []byte(f), vals[0], IntToBytes(p), Act)
@@ -127,20 +114,8 @@ func (t *Table) Acts(vals [][]byte, Act string, updatefield []bool) (r ReInfo) {
 		}
 	}
 	r.Succ = true
-	r.Info = "ok"
+	r.Info = "成功！"
 	return
-}
-
-//是不是修改字段。
-//由于支持组合索引，故而需要循环，看似复制些
-func isUpdateField(ks []string, updatefield []bool) bool {
-	isf := false
-	idx := 0
-	for i := 0; i < len(ks); i++ { //单个或组合索引。由于支持组合索引，故而需要循环，看似复制些
-		idx, _ = strconv.Atoi(ks[i])
-		isf = isf || updatefield[idx]
-	}
-	return isf
 }
 
 //添加/删除主键数据，即添加/删除一条记录。
@@ -185,16 +160,6 @@ func (t *Table) RDtoMap(Rd []byte) (r map[string]string) {
 	return
 }
 
-//将记录转换为map
-func (t *Table) RDtoMaps(Rd []byte, Ifo *TableInfo) (r map[string]string) {
-	r = make(map[string]string, len(Ifo.Fields))
-	vs := t.Split(Rd)
-	for i, v := range vs {
-		r[Ifo.Fields[i]] = Ifo.ByteChString(Ifo.FieldType[i], v) //将包括分隔符的转义数据恢复
-	}
-	return
-}
-
 //将记录分开并转义数据恢复
 func (t *Table) Split(Rd []byte) (r [][]byte) {
 	r = SplitRd(Rd)
@@ -229,7 +194,7 @@ func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) 
 			continue
 		}
 		r.WriteString("{")
-		rdmap = t.RDtoMaps(v, Ifo)
+		rdmap = t.RDtoMap(v)
 		/*
 			[{"id":2,"title":"金刚经","fid":1,"isleaf":"0"},
 			{"id":3,"title":"六祖坛经","fid":1,"isleaf":"0"}]

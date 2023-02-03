@@ -1,0 +1,98 @@
+package xbdb
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb"
+)
+
+//对表结构以及对应的数据进行同步更新
+//除了增加字段，删除字段、修改字段名和表名，都需要进行所有数据记录的修改。
+//不支持字段位移顺序。
+type TableAll struct {
+	Table, ImTable *Table
+	TableInfo      *TableInfo
+	deloTable      bool
+}
+
+func NewTableAll(db *leveldb.DB, tbname string) *TableAll {
+	Table := NewTable(db, tbname)
+	TableInfo := NewTableInfo(db)
+	return &TableAll{
+		Table:     Table,
+		ImTable:   Table, //导入的表。即更新的表
+		TableInfo: TableInfo,
+	}
+}
+
+//重新添加表结构，实质就是先删除后添加。
+//仅仅在没有数据时有效和使用。
+func (t *TableAll) ReInsIfo(ifo TableInfo) (r ReInfo) {
+	r = t.TableInfo.Del(t.Table.Name)
+	if !r.Succ {
+		return
+	}
+	r = t.TableInfo.Create(t.Table.Name, ifo.FTLen, ifo.Fields, ifo.FieldType, ifo.Idxs, ifo.FullText)
+	return
+}
+
+//添加字段，只能在末尾加。否则原有数据会混乱。故不支持字段位移顺序
+func (t *TableAll) Add(fieldname, fieldtype string) (r ReInfo) {
+	ifo := t.TableInfo.GetInfo(t.Table.Name)
+	ifo.Fields = append(ifo.Fields, fieldname)
+	ifo.FieldType = append(ifo.FieldType, fieldtype)
+	r = t.ReInsIfo(ifo)
+	return
+}
+
+//删除字段
+func (t *TableAll) Del(fieldname string) (r ReInfo) {
+	ifo := t.TableInfo.GetInfo(t.Table.Name)
+	_, idx := t.TableInfo.GetFieldTypes(fieldname)
+	ifo.Fields = append(ifo.Fields[:idx], ifo.Fields[idx+1:]...)          //删除字段
+	ifo.FieldType = append(ifo.FieldType[:idx], ifo.FieldType[idx+1:]...) //删除字段类型
+
+	t.ImTable.Ifo = ifo //新Table只是表信息ifo不同
+	t.deloTable = true  //删除旧表
+	r = t.Import()      //导入
+	r = t.ReInsIfo(ifo) //更新表信息
+	return
+}
+
+//修改字段
+func (t *TableAll) Upd(chd map[string]string) (r ReInfo) {
+	ifo := t.TableInfo.GetInfo(t.Table.Name)
+	var vs []string
+	for k, v := range chd { //k,原字段名，v，新字段名和类型
+		_, idx := t.TableInfo.GetFieldTypes(k)
+		vs = strings.Split(v, ",")
+		if len(vs) != 2 {
+			fmt.Println(v, "格式不对。")
+			continue
+		}
+		ifo.Fields[idx] = vs[0]
+		ifo.FieldType[idx] = vs[1]
+	}
+	t.ImTable.Ifo = ifo //新Table只是表信息ifo不同
+	t.deloTable = true  //删除旧表
+	r = t.Import()      //导入
+	r = t.ReInsIfo(ifo) //更新表信息
+	return
+}
+
+//导入新表。可以自己导入自己，用于表改变删除改变字段名称时用。
+func (t *TableAll) Import() (r ReInfo) {
+	t.Table.Select.ForRDFun(true, t.outport)
+	return
+}
+func (t *TableAll) outport(rd []byte) bool {
+	rdmap := t.Table.RDtoMap(rd)
+	if t.deloTable {
+		id := rdmap[t.Table.Ifo.Fields[0]]
+		bid := t.Table.Ifo.TypeChByte(t.Table.Ifo.Fields[0], id)
+		t.Table.Delete(bid)
+	}
+	t.ImTable.Ins(rdmap)
+	return true
+}

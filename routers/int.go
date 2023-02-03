@@ -2,25 +2,17 @@ package routers
 
 import (
 	"fmt"
-	"log"
 	"research/xbdb"
-
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
-var Xb *leveldb.DB
 var Table map[string]*xbdb.Table
 
 func Ini() {
 	//打开或创建数据库
 	dbpath := ConfigMap["dbpath"].(string)
-	xb, err := leveldb.OpenFile(dbpath+"db", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	xbdb.OpenDb(dbpath)
 	//建表
-	Xb = xb
-	dbinfo := xbdb.NewTableInfo(Xb)
+	dbinfo := xbdb.NewTableInfo()
 	if dbinfo.GetInfo("ca").FieldType == nil {
 		createca(dbinfo)
 	}
@@ -31,10 +23,13 @@ func Ini() {
 		createc(dbinfo)
 	}
 	//打开表操作结构
-	Table = make(map[string]*xbdb.Table)
-	Table["ca"] = xbdb.NewTable(Xb, "ca")
-	Table["art"] = xbdb.NewTable(Xb, "art")
-	Table["c"] = xbdb.NewTable(Xb, "c")
+	Table = xbdb.OpenTables()
+	/*
+		Table = make(map[string]*xbdb.Table)
+		Table["ca"] = xbdb.NewTable("ca")
+		Table["art"] = xbdb.NewTable("art")
+		Table["c"] = xbdb.NewTable("c")
+	*/
 	//目录入加载内存
 	CRAMs = NewCataRAMs()
 	CRAMs.LoadCataRAM()

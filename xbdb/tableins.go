@@ -49,7 +49,7 @@ func (t *Table) Ins(params map[string]string) (r ReInfo) {
 
 //添加一个kv
 func (t *Table) put(k, v []byte) (r ReInfo) {
-	err = t.Db.Put(k, v, nil) //vals[0]=主键
+	err = t.db.Put(k, v, nil) //vals[0]=主键
 	if err != nil {
 		r.Succ = false
 		r.Info = err.Error()

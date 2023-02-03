@@ -16,18 +16,18 @@ var actmap map[string]func(k, v []byte) (r ReInfo)
 //表的类
 type Table struct {
 	Name   string
-	Db     *leveldb.DB
+	db     *leveldb.DB
 	Select *Select
 	Ac     *Autoinc
 	Ifo    TableInfo
 }
 
-func NewTable(db *leveldb.DB, name string) *Table {
+func NewTable(name string) *Table {
 	return &Table{
 		Name:   name,
-		Db:     db,
-		Select: NewSelect(name, db),
-		Ifo:    NewTableInfo(db).GetInfo(name),
+		db:     xb,
+		Select: NewSelect(name),
+		Ifo:    NewTableInfo().GetInfo(name),
 	}
 }
 
@@ -127,7 +127,7 @@ func (t *Table) Acts(vals [][]byte, Act string, updatefield []bool) (r ReInfo) {
 		}
 	}
 	r.Succ = true
-	r.Info = "ok"
+	r.Info = "成功。"
 	return
 }
 
@@ -175,23 +175,38 @@ func (t *Table) StrToByte(params map[string]string) (r [][]byte) {
 	return
 }
 
+/*
+//字符串根据表类型信息转换为byte数据
+func StrToByteForIfo(params map[string]string, ifo TableInfo) (r [][]byte) {
+	for i, v := range ifo.Fields {
+		r = append(r, ifo.TypeChByte(ifo.FieldType[i], params[v]))
+	}
+	return
+}
+*/
 //将记录转换为map
 func (t *Table) RDtoMap(Rd []byte) (r map[string]string) {
-	r = make(map[string]string, len(t.Ifo.Fields))
-	vs := t.Split(Rd)
-	for i, v := range vs {
-		r[t.Ifo.Fields[i]] = t.Ifo.ByteChString(t.Ifo.FieldType[i], v) //将包括分隔符的转义数据恢复
-	}
+	r = t.FieldValuetoMap(Rd, &t.Ifo)
 	return
 }
 
 //将记录转换为map
-func (t *Table) RDtoMaps(Rd []byte, Ifo *TableInfo) (r map[string]string) {
+func (t *Table) FieldValuetoMap(Rd []byte, Ifo *TableInfo) (r map[string]string) {
 	r = make(map[string]string, len(Ifo.Fields))
 	vs := t.Split(Rd)
-	for i, v := range vs {
-		r[Ifo.Fields[i]] = Ifo.ByteChString(Ifo.FieldType[i], v) //将包括分隔符的转义数据恢复
+
+	vslen := len(vs)
+	for i, v := range Ifo.Fields {
+		if i < vslen {
+			r[v] = Ifo.ByteChString(Ifo.FieldType[i], vs[i])
+		} else { //添加新字段时，字段比旧数据数组长度大。
+			r[v] = ""
+		}
 	}
+	/*
+		for i, v := range vs {
+			r[Ifo.Fields[i]] = Ifo.ByteChString(Ifo.FieldType[i], v) //将包括分隔符的转义数据恢复
+		}*/
 	return
 }
 
@@ -229,7 +244,7 @@ func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) 
 			continue
 		}
 		r.WriteString("{")
-		rdmap = t.RDtoMaps(v, Ifo)
+		rdmap = t.FieldValuetoMap(v, Ifo)
 		/*
 			[{"id":2,"title":"金刚经","fid":1,"isleaf":"0"},
 			{"id":3,"title":"六祖坛经","fid":1,"isleaf":"0"}]

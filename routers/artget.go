@@ -2,6 +2,7 @@ package routers
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"research/xbdb"
 	"strconv"
@@ -70,8 +71,13 @@ func (c *cexefun) addtext(rd []byte) bool {
 		return true
 	}
 	vs := Table[c.tbname].Split(rd) //bytes.Split(rd, []byte(xbdb.Split))
-	c.r.Write(vs[1])
-	//c.r.Write([]byte("\n"))
+	if len(vs) > 1 {
+		c.r.Write(vs[1])
+	} else {
+		c.r.Write(rd)
+		fmt.Printf("rd: %v\n", rd)
+		fmt.Println("rd string:", string(rd))
+	}
 	c.Loop++
 	return true
 }

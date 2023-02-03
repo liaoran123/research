@@ -8,19 +8,19 @@ import (
 
 //空游标，整个数据库数据游标
 func (s *Select) Nil() (iter iterator.Iterator) {
-	iter = s.Db.NewIterator(nil, nil)
+	iter = s.db.NewIterator(nil, nil)
 	return
 }
 
 //前缀匹配数据游标
 func (s *Select) IterPrefix(key []byte) (iter iterator.Iterator) {
-	iter = s.Db.NewIterator(util.BytesPrefix([]byte(key)), nil)
+	iter = s.db.NewIterator(util.BytesPrefix([]byte(key)), nil)
 	return
 }
 
 //范围数据游标
 func (s *Select) IterRand(b, e []byte) (iter iterator.Iterator) {
-	iter = s.Db.NewIterator(&util.Range{Start: b, Limit: e}, nil)
+	iter = s.db.NewIterator(&util.Range{Start: b, Limit: e}, nil)
 	return
 }
 

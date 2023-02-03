@@ -17,7 +17,7 @@ import (
 3，根据itersfor.go进行各种遍历。
 */
 type Select struct {
-	Db     *leveldb.DB
+	db     *leveldb.DB
 	Tbname string
 }
 
@@ -40,7 +40,7 @@ func Next(iter iterator.Iterator) bool {
 	return iter.Next()
 }
 
-func NewSelect(tbname string, db *leveldb.DB) *Select { //*leveldb.DB {
+func NewSelect(tbname string) *Select { //*leveldb.DB {
 
 	iterFixed = make(map[bool]func(iter iterator.Iterator) bool, 2)
 	iterFixed[true] = First
@@ -50,7 +50,7 @@ func NewSelect(tbname string, db *leveldb.DB) *Select { //*leveldb.DB {
 	itermove[false] = Prev
 
 	return &Select{
-		Db:     db,
+		db:     xb,
 		Tbname: tbname,
 	}
 }
@@ -196,7 +196,7 @@ func (s *Select) FindSeekFun(key []byte, asc bool, f func(rd []byte) bool) {
 
 //获取一个key的values
 func (s *Select) GetValue(key []byte) (r []byte) {
-	r, _ = s.Db.Get(key, nil)
+	r, _ = s.db.Get(key, nil)
 	return
 }
 

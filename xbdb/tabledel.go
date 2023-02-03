@@ -11,7 +11,7 @@ import (
 func (t *Table) Delete(pk []byte) (r ReInfo) {
 	//key := JoinBytes([]byte(t.Name+Split), pk)
 	key := JoinBytes(t.Select.GetTbKey(), pk)
-	data, err := t.Db.Get(key, nil)
+	data, err := t.db.Get(key, nil)
 	if err != nil {
 		r.Info = err.Error()
 		return
@@ -36,7 +36,7 @@ func (t *Table) Del(pk string) (r ReInfo) {
 
 //按删除一个key
 func (t *Table) del(k, v []byte) (r ReInfo) {
-	err = t.Db.Delete(k, nil)
+	err = t.db.Delete(k, nil)
 	if err != nil {
 		r.Info = err.Error()
 		r.Succ = false

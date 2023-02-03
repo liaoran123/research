@@ -24,7 +24,7 @@ func (t *Table) Upd(params map[string]string) (r ReInfo) {
 		}
 	}
 	key := JoinBytes(t.Select.GetTbKey(), uvals[0])
-	data, err := t.Db.Get(key, nil) //获取旧数据
+	data, err := t.db.Get(key, nil) //获取旧数据
 	if err != nil {
 		r.Info = err.Error()
 		return

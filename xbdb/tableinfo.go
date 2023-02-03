@@ -23,9 +23,10 @@ const (
 
 //表信息的类。//默认必须第一个字段是主键id
 type TableInfo struct {
-	Db        *leveldb.DB
-	Name      string   //表名
-	Fields    []string //字段
+	db     *leveldb.DB
+	Name   string   //表名
+	Fields []string //字段。只记录用户先后顺序添加的Fields名称，凡是添加都在末尾添加。
+	//OrderFields []string //字段。记录用户对各个Field进行位移后排序结果。用作按该顺序显示给用户。
 	FieldType []string //字段对应的类型
 	Pk        string   //默认必须有一个自动增值的主键id
 	Idxs      []string //索引字段的下标，不使用[]int，转换byte太麻烦。
@@ -33,9 +34,15 @@ type TableInfo struct {
 	FTLen     string   //全文搜索的长度，中文默认是7
 }
 
+/*
 func NewTableInfo(DB *leveldb.DB) *TableInfo {
 	return &TableInfo{
 		Db: DB,
+	}
+}*/
+func NewTableInfo() *TableInfo {
+	return &TableInfo{
+		db: xb,
 	}
 }
 
@@ -48,14 +55,14 @@ func (t *TableInfo) Create(name, ftlen string, fields, fieldType, idxs, fullText
 
 	tbpfx := TbInfopfx + Split + name //表信息前缀
 
-	r.Succ = t.Db.Put([]byte(tbpfx), []byte(strings.Join(fields, Split)), nil) == nil                            //添加字段信息
-	r.Succ = r.Succ && t.Db.Put([]byte(tbpfx+IdxSplit+"ty"), []byte(strings.Join(fieldType, Split)), nil) == nil //添加字段类型信息
-	r.Succ = r.Succ && t.Db.Put([]byte(tbpfx+IdxSplit+"pk"), []byte(fields[0]), nil) == nil                      //添加主键信息
-	r.Succ = r.Succ && t.Db.Put([]byte(tbpfx+IdxSplit+"idx"), []byte(strings.Join(idxs, Split)), nil) == nil     //添加索引信息
-	r.Succ = r.Succ && t.Db.Put([]byte(tbpfx+IdxSplit+"ft"), []byte(strings.Join(fullText, Split)), nil) == nil  //添加索引信息
-	r.Succ = r.Succ && t.Db.Put([]byte(tbpfx+IdxSplit+"ftlen"), []byte(ftlen), nil) == nil
+	r.Succ = t.db.Put([]byte(tbpfx), []byte(strings.Join(fields, Split)), nil) == nil                            //添加字段信息
+	r.Succ = r.Succ && t.db.Put([]byte(tbpfx+IdxSplit+"ty"), []byte(strings.Join(fieldType, Split)), nil) == nil //添加字段类型信息
+	r.Succ = r.Succ && t.db.Put([]byte(tbpfx+IdxSplit+"pk"), []byte(fields[0]), nil) == nil                      //添加主键信息
+	r.Succ = r.Succ && t.db.Put([]byte(tbpfx+IdxSplit+"idx"), []byte(strings.Join(idxs, Split)), nil) == nil     //添加索引信息
+	r.Succ = r.Succ && t.db.Put([]byte(tbpfx+IdxSplit+"ft"), []byte(strings.Join(fullText, Split)), nil) == nil  //添加索引信息
+	r.Succ = r.Succ && t.db.Put([]byte(tbpfx+IdxSplit+"ftlen"), []byte(ftlen), nil) == nil
 
-	r.Succ = r.Succ && t.Db.Put([]byte(Tbspfx+Split+name), []byte{}, nil) == nil //添加表列表
+	r.Succ = r.Succ && t.db.Put([]byte(Tbspfx+Split+name), []byte{}, nil) == nil //添加表列表
 	if r.Succ {
 		r.Info = "创建表“" + name + "”成功！"
 	} else {
@@ -71,20 +78,20 @@ func (t *TableInfo) GetInfo(name string) (tbif TableInfo) {
 	tf.Name = t.Name
 	var data []byte
 	var err error
-	data, err = t.Db.Get([]byte(tbpfx), nil) //打开字段信息
+	data, err = t.db.Get([]byte(tbpfx), nil) //打开字段信息
 	if err != nil {
 		return
 	}
 	tf.Fields = strings.Split(string(data), Split)
-	data, _ = t.Db.Get([]byte(tbpfx+IdxSplit+"ty"), nil) //打开主键信息
+	data, _ = t.db.Get([]byte(tbpfx+IdxSplit+"ty"), nil) //打开主键信息
 	tf.FieldType = strings.Split(string(data), Split)
-	data, _ = t.Db.Get([]byte(tbpfx+IdxSplit+"pk"), nil) //打开主键信息
+	data, _ = t.db.Get([]byte(tbpfx+IdxSplit+"pk"), nil) //打开主键信息
 	tf.Pk = string(data)
-	data, _ = t.Db.Get([]byte(tbpfx+IdxSplit+"idx"), nil) //打开索引信息
+	data, _ = t.db.Get([]byte(tbpfx+IdxSplit+"idx"), nil) //打开索引信息
 	tf.Idxs = strings.Split(string(data), Split)
-	data, _ = t.Db.Get([]byte(tbpfx+IdxSplit+"ft"), nil) //打开全文索引信息
+	data, _ = t.db.Get([]byte(tbpfx+IdxSplit+"ft"), nil) //打开全文索引信息
 	tf.FullText = strings.Split(string(data), Split)
-	data, _ = t.Db.Get([]byte(tbpfx+IdxSplit+"ftlen"), nil) //全文索引长度信息
+	data, _ = t.db.Get([]byte(tbpfx+IdxSplit+"ftlen"), nil) //全文索引长度信息
 	tf.FTLen = string(data)
 
 	tbif = tf
@@ -97,9 +104,9 @@ func (t *TableInfo) Del(name string) (r ReInfo) {
 		return
 	}
 	tbpfx := TbInfopfx + Split + name //表信息前缀
-	iter := t.Db.NewIterator(util.BytesPrefix([]byte(tbpfx)), nil)
+	iter := t.db.NewIterator(util.BytesPrefix([]byte(tbpfx)), nil)
 	for iter.Next() {
-		err = t.Db.Delete(iter.Key(), nil)
+		err = t.db.Delete(iter.Key(), nil)
 		if err != nil {
 			r.Info = err.Error()
 			r.Succ = false
@@ -111,6 +118,13 @@ func (t *TableInfo) Del(name string) (r ReInfo) {
 	if err != nil {
 		r.Info = err.Error()
 		r.Succ = false
+		return
+	}
+	err = t.db.Delete([]byte(Tbspfx+Split+name), nil) //删除表列表
+	if err != nil {
+		r.Info = err.Error()
+		r.Succ = false
+		return
 	}
 	r.Info = "删除" + name + "成功！"
 	r.Succ = true
@@ -123,27 +137,6 @@ func (t *TableInfo) Del(name string) (r ReInfo) {
 //查询、添加、删除、修改都进行该转换，则可保证数据正确、准确。
 func (t *TableInfo) TypeChByte(fieldType, Fieldvalue string) (r []byte) {
 	r = t.FieldTypeChByte(fieldType, Fieldvalue, true)
-	/*
-		FieldType := fieldType
-		if strings.Contains(FieldType, "float") { //float(2),float的格式
-			FieldType = "float"
-		}
-		switch FieldType {
-		case "int":
-			iv, _ := strconv.Atoi(Fieldvalue)
-			r = IntToBytes(iv)
-		case "int64":
-			iv, _ := strconv.Atoi(Fieldvalue)
-			r = Int64ToBytes(int64(iv))
-		case "float":
-			fv, _ := strconv.ParseFloat(Fieldvalue, 64) //只能转Float64
-			r = Float64ToByte(fv)
-
-		default:
-			r = []byte(Fieldvalue)
-		}
-		r = SplitToCh([]byte(r)) //转义
-	*/
 	return
 }
 

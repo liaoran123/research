@@ -9,8 +9,8 @@ import (
 
 var CRAMs *CataRAMs
 
-//目录数据少，使用频繁，故适宜加载入内存
-//删除目录时不能真正删除，只需将除id外置空即可。这样保证通过id直接匹配数组下标。
+// 目录数据少，使用频繁，故适宜加载入内存
+// 删除目录时不能真正删除，只需将除id外置空即可。这样保证通过id直接匹配数组下标。
 type cataRAM struct {
 	/*id,*/ fid   int
 	title, isleaf string
@@ -37,7 +37,7 @@ func NewCataRAMs() *CataRAMs {
 }
 func (c *CataRAMs) LoadCataRAM() {
 	key := []byte("ca" + xbdb.Split)
-	tbd := Table["ca"].Select.FindPrefix(key, true, 0, -1)
+	tbd := Table["ca"].Select.FindPrefix(key, true, 0, -1, []int{}, false)
 	if tbd != nil {
 		c.toRAM(tbd)
 	}
@@ -63,7 +63,7 @@ func (c *CataRAMs) Append(id, fid int, title, isleaf string) {
 	}
 }
 
-//通过目录id获取一个目录信息
+// 通过目录id获取一个目录信息
 func (c *CataRAMs) Get(id int) (r *cataRAM) {
 	if id, ok := c.CataRAMMap[uint32(id)]; ok {
 		r = c.cataRAM[id]
@@ -99,12 +99,40 @@ func (c *CataRAMs) GetCataDir(cataid int) (r []CataInfo) {
 }
 */
 //获取目录路径
+/*
 func (c *CataRAMs) GetCaDirToJson(cataid int) (r string) {
 	var ok bool
 	var i uint32
 	cid := cataid
 	L := 0
 	jsonstr := "{\"result\":["
+	for cid > 0 {
+		if i, ok = CRAMs.CataRAMMap[uint32(cid)]; ok {
+
+			jsonstr += "{\"id\":" + strconv.Itoa(cid) + ","
+			jsonstr += "\"title\":" + strconv.Quote(CRAMs.cataRAM[i].title) + ","
+			jsonstr += "\"fid\":" + strconv.Itoa(CRAMs.cataRAM[i].fid) + ","
+			jsonstr += "\"isleaf\":\"" + CRAMs.cataRAM[i].isleaf + "\"},"
+			cid = CRAMs.cataRAM[i].fid
+
+		} else { //用户没有设置目录
+			break
+		}
+		L++ //以防用户目录混乱导致的死循环
+		if L > 49 {
+			break
+		}
+	}
+	r = strings.Trim(jsonstr, ",") + "]}"
+	return
+}
+*/
+func (c *CataRAMs) GetCaDirToJsonApp(cataid int) (r string) {
+	var ok bool
+	var i uint32
+	cid := cataid
+	L := 0
+	jsonstr := "["
 	for cid > 0 {
 		if i, ok = CRAMs.CataRAMMap[uint32(cid)]; ok {
 			/*
@@ -125,12 +153,12 @@ func (c *CataRAMs) GetCaDirToJson(cataid int) (r string) {
 			break
 		}
 	}
-	r = strings.Trim(jsonstr, ",") + "]}"
+	r = strings.Trim(jsonstr, ",") + "]"
 	return
 }
 
-//在某个或多个目录下查找
-//caids目录id集合
+// 在某个或多个目录下查找
+// caids目录id集合
 func CacaRand(caid int, caids string) (r bool) {
 	if caids == "" || caid == 0 {
 		r = true

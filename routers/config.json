@@ -1,7 +1,7 @@
 {
     "port":"8049",
     "pws":"123456",
-    "dbpath":"F:/dababase/research/",
+    "dbpath":"E:/database/research/",
     "dbidxcount":0,
     "minlentext":49
 }

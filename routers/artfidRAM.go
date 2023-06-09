@@ -10,7 +10,7 @@ var Artfid map[uint32]uint32
 
 func LoadartRAM() {
 	key := []byte("art" + xbdb.Split)
-	tbd := Table["art"].Select.FindPrefix(key, true, 0, -1)
+	tbd := Table["art"].Select.FindPrefix(key, true, 0, -1, []int{}, false)
 	if tbd != nil {
 		toRAM(tbd)
 	}

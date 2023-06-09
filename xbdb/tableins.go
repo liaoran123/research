@@ -1,5 +1,5 @@
-//小白数据库
-//表信息
+// 小白数据库
+// 表信息
 package xbdb
 
 import (
@@ -7,13 +7,13 @@ import (
 	"strconv"
 )
 
-//添加一条数据以及相关索引等所有数据，默认数据与字段一一对应。
+// 添加一条数据以及相关索引等所有数据，默认数据与字段一一对应。
 func (t *Table) Insert(vals [][]byte) (r ReInfo) {
 	//if string(vals[0]) == "" { //"\x00\x00\x00\x00" { //如果主键为空，则是使用自动增值。只有类型是int时成立。
+	if t.Ac == nil {
+		t.newAutoinc()
+	}
 	if len(vals[0]) == 0 {
-		if t.Ac == nil {
-			t.newAutoinc()
-		}
 		vals[0] = t.Ifo.TypeChByte("int", t.Ac.GetidStr())
 		r.LastId = strconv.Itoa(t.Ac.GetidDic())
 	} else {
@@ -28,12 +28,13 @@ func (t *Table) Insert(vals [][]byte) (r ReInfo) {
 	return
 }
 
-//添加一条数据以及相关索引等所有数据，默认数据与字段一一对应。
+// 添加一条数据以及相关索引等所有数据，默认数据与字段一一对应。
 func (t *Table) Ins(params map[string]string) (r ReInfo) {
-	if params["id"] == "" { //如果主键为空，则是使用自动增值,只有类型是int时成立。
-		if t.Ac == nil {
-			t.newAutoinc()
-		}
+	if t.Ac == nil {
+		t.newAutoinc()
+	}
+	if _, ok := params["id"]; !ok { //如果主键为空，则是使用自动增值,只有类型是int时成立。
+
 		params["id"] = t.Ac.GetidStr()
 	} else {
 		t.Ac.id, _ = strconv.Atoi(params["id"])
@@ -47,9 +48,11 @@ func (t *Table) Ins(params map[string]string) (r ReInfo) {
 	return
 }
 
-//添加一个kv
+// 添加一个kv
 func (t *Table) put(k, v []byte) (r ReInfo) {
+	mu.Lock()
 	err = t.db.Put(k, v, nil) //vals[0]=主键
+	mu.Unlock()
 	if err != nil {
 		r.Succ = false
 		r.Info = err.Error()
@@ -74,31 +77,3 @@ func (t *Table) newAutoinc() {
 	}
 	t.Ac = NewAutoinc(id)
 }
-
-/*
-//添加主键数据，即添加一条记录。
-func (t *Table) InsPK(vals [][]byte) (r ReInfo) {
-	//prefix := t.Ifo.Name + Split
-	//ca-7 禅定品-3-1
-	//k=ca-7 v=禅定品-3-1
-	key := t.Ifo.getPkKey(vals[0])
-	r = t.put(key, bytes.Join(vals[1:], []byte(Split)))
-	if !r.Succ {
-		return
-	}
-	return
-}
-
-//添加一条索引数据。
-func (t *Table) InsIDX(idxfield, idxvalue, pkvalue []byte) (r ReInfo) {
-	//bySplit := []byte(Split)
-	//k=ca,fid-3-7 v=
-	//prefix := JoinBytes([]byte(t.Ifo.Name+","), idxFieldname, bySplit, idxFieldvalue, bySplit, PKvalue)
-	key := t.Ifo.getIdxPfxKey(idxfield, idxvalue, pkvalue)
-	r = t.put(key, []byte{}) //vals[0]=主键
-	if !r.Succ {
-		return
-	}
-	return
-}
-*/

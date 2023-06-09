@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-//用户提交的数据参数转map
+// 用户提交的数据参数转map
 func splitdata(reqdata string) map[string]string {
 	params := make(map[string]string)
 	pds := strings.Split(reqdata, "&")
@@ -27,7 +27,7 @@ func splitdata(reqdata string) map[string]string {
 	return params
 }
 
-//获取post的数据
+// 获取post的数据
 func getPostData(req *http.Request) string {
 	defer req.Body.Close()
 	con, _ := ioutil.ReadAll(req.Body)
@@ -36,19 +36,22 @@ func getPostData(req *http.Request) string {
 	return string(con)
 }
 
-//获取get的数据
+// 获取get的数据
 func getGettData(req *http.Request) string {
-	return strings.Split(req.RequestURI, "?")[1]
+	if strings.Contains(req.RequestURI, "?") {
+		return strings.Split(req.RequestURI, "?")[1]
+	}
+	return ""
 	//pdata, _ := url.QueryUnescape(string(pas))
 	//return pdata
 }
 
-//将post数据转为map
+// 将post数据转为map
 func postparas(req *http.Request) map[string]string {
 	return splitdata(getPostData(req))
 }
 
-//将get数据转为map
+// 将get数据转为map
 func getparas(req *http.Request) map[string]string {
 	return splitdata(getGettData(req))
 }

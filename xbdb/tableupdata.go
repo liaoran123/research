@@ -1,5 +1,5 @@
-//小白数据库
-//表信息
+// 小白数据库
+// 表信息
 package xbdb
 
 //修改整条记录。等于先删除后添加。
@@ -31,8 +31,11 @@ func (t *Table) Upd(params map[string]string) (r ReInfo) {
 	}
 	//组织数据
 	var dvals [][]byte
-	dvals = append(dvals, uvals[0])
-	dvals = append(dvals, SplitRd(data)...)
+	dvals = append(dvals, uvals[0])         //主键id
+	dvals = append(dvals, SplitRd(data)...) //其他字段数据
+	for i, v := range dvals {               //数据转义
+		dvals[i] = SplitToCh(v)
+	}
 	r = t.Acts(dvals, "delete", updatefield) //删除旧数据
 	if !r.Succ {
 		return
@@ -40,7 +43,7 @@ func (t *Table) Upd(params map[string]string) (r ReInfo) {
 	//更新数据
 	for i, v := range uvals {
 		if len(v) != 0 { //即是要修改的字段
-			dvals[i] = v //更改要更新的字段值
+			dvals[i] = SplitToCh(v) //更改要更新的字段值
 		}
 	}
 	r = t.Acts(dvals, "insert", updatefield) //添加新数据

@@ -2,13 +2,14 @@ package routers
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
 	"research/xbdb"
 	"strconv"
 )
 
-//获取一文章信息
+var tifo *xbdb.TableInfo
+
+// 获取一文章信息
 func artget(w http.ResponseWriter, req *http.Request) {
 	const (
 		tbname   = "art"
@@ -18,13 +19,13 @@ func artget(w http.ResponseWriter, req *http.Request) {
 	//getonerecord(tbname, idxfield, params["id"], w)
 	//打开文章表
 	idxvalue := Table[tbname].Ifo.FieldChByte(idxfield, params["id"])
-	tdb := Table[tbname].Select.Record(idxvalue)
+	tdb := Table[tbname].Select.Record(idxvalue, []int{})
 	if tdb == nil {
 		return
 	}
 	//打开文章内容表，一个文章表对应多个内容表
 	cf := newcexefun()
-	//以下的id转换比较复杂，对应添加时的转换ArtSecToId函数
+	//以下的id转换比较复杂，对应添加时的转换ArteScToId函数
 	id, _ := strconv.Atoi(params["id"])
 	bid := xbdb.IntToBytes(id)
 	idxvalue = Table["c"].Ifo.FieldChByte(idxfield, string(bid))
@@ -35,10 +36,16 @@ func artget(w http.ResponseWriter, req *http.Request) {
 		cf.r.Reset()
 		bufpool.Put(cf.r)
 	}
-	tifo := Table[tbname].Ifo                                      //创建一个临时的表信息
-	tifo.Fields = append(Table[tbname].Ifo.Fields, "text")         //添加一个text字段
-	tifo.FieldType = append(Table[tbname].Ifo.FieldType, "string") //添加一个text字段类型
-	r := Table[tbname].DataToJsonforIfo(tdb, &tifo)                //DataToJson(tdb, tifo)
+	if tifo == nil {
+		tifo = new(xbdb.TableInfo) //创建一个临时的表信息
+		//tifo := Table[tbname].Ifo
+		tifo.Fields = append(tifo.Fields, Table[tbname].Ifo.Fields...)
+		tifo.Fields = append(tifo.Fields, "text")                               //添加一个text字段
+		tifo.FieldType = append(tifo.FieldType, Table[tbname].Ifo.FieldType...) //添加一个text字段类型
+		tifo.FieldType = append(tifo.FieldType, "string")                       //添加一个text字段类型
+	}
+
+	r := Table[tbname].DataToJsonforIfoApp(tdb, tifo) //DataToJson(tdb, tifo)
 	if r != nil {
 		w.Write(r.Bytes())
 		//w.Write([]byte(strconv.Quote(r.String()))) //必须使用strconv.Quote转义
@@ -65,19 +72,12 @@ func newcexefun() *cexefun {
 		bkey:   Table[tbname].Select.GetPkKey([]byte("")), //获取前缀
 	}
 }
-func (c *cexefun) addtext(rd []byte) bool {
+func (c *cexefun) addtext(k, v []byte) bool {
 	if c.Loop == 0 { //第一条是标题，省去。
 		c.Loop++
 		return true
 	}
-	vs := Table[c.tbname].Split(rd) //bytes.Split(rd, []byte(xbdb.Split))
-	if len(vs) > 1 {
-		c.r.Write(vs[1])
-	} else {
-		c.r.Write(rd)
-		fmt.Printf("rd: %v\n", rd)
-		fmt.Println("rd string:", string(rd))
-	}
+	c.r.Write(v)
 	c.Loop++
 	return true
 }

@@ -35,21 +35,21 @@ func upd(name string, vals [][]byte) (r xbdb.ReInfo) {
 	return
 }
 
-//删除一条表记录
+// 删除一条表记录
 func deleteRd(tbname, id string) (r xbdb.ReInfo) {
 	bid := Table[tbname].Ifo.TypeChByte(Table[tbname].Ifo.FieldType[0], id)
 	r = Table[tbname].Delete(bid)
 	return
 }
 
-//获取表的一条记录
+// 获取表的一条记录
 func getonerecord(tbname, idxfield, id string, w http.ResponseWriter) {
 	idxvalue := Table[tbname].Ifo.FieldChByte(idxfield, id)
-	tbd := Table[tbname].Select.Record(idxvalue)
+	tbd := Table[tbname].Select.Record(idxvalue, []int{})
 	if tbd == nil {
 		return
 	}
-	r := Table[tbname].DataToJson(tbd) //DataToJson(tbd, Table[tbname].Ifo)
+	r := Table[tbname].DataToJsonApp(tbd) //r := Table[tbname].DataToJson(tbd)
 	w.Write(r.Bytes())
 	r.Reset()
 	xbdb.Bufpool.Put(r)

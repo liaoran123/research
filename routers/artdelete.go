@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"research/xbdb"
@@ -35,8 +34,9 @@ type delfun struct {
 	r xbdb.ReInfo
 }
 
-func (d *delfun) delc(rd []byte) bool {
-	ks := bytes.Split(rd, []byte(xbdb.Split))
-	d.r = Table["c"].Delete(ks[0])
+func (d *delfun) delc(k, v []byte) bool {
+	//ks := bytes.Split(rd, []byte(xbdb.Split))
+	//d.r = Table["c"].Delete(ks[0])
+	d.r = Table["c"].Delete(k) //.Deletekey(k)
 	return d.r.Succ
 }

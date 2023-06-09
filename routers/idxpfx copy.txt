@@ -1,0 +1,155 @@
+package routers
+
+import (
+	"bytes"
+	"net/http"
+	"research/gstr"
+	"research/pubgo"
+	"research/xbdb"
+	"strconv"
+	"strings"
+)
+
+// 为搜佛说定制。通过关键词查找正反向匹配关键词。
+func Idxpfx(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*") //同源策略，不加客户端调用不了。
+	w.Header().Set("Content-Type", "application/json")
+
+	pubgo.Tj.Brows(gstr.Mstr(req.URL.Path, "/", "/"))
+
+	params := getparas(req)
+	const (
+		tbname   = "c"
+		idxfield = "s"
+	)
+
+	kw := params["kw"]
+	top := params["top"]
+	if top == "" {
+		top = "49"
+	}
+	itop, err := strconv.Atoi(top)
+	if err != nil {
+		top = "49"
+	} else {
+		if itop > 108 {
+			top = "108"
+		}
+	}
+
+	caid := params["caid"]
+
+	//自动转化参数值
+	idxvalue := Table[string(tbname)].Ifo.FieldChByte(idxfield, kw)
+	count := 0
+	count, _ = strconv.Atoi(top)
+	idx := Newidxfunc(kw, caid, count)
+	idx.r.WriteString("\"rightpxf\":[")
+	Table["c"].Select.WhereIdxLikeFun([]byte(idxfield), idxvalue, true, idx.add)
+	jsonstr := idx.r.String()
+	if idx.r != nil {
+		idx.r.Reset()
+		bufpool.Put(idx.r)
+	}
+	jsonstr = strings.Trim(jsonstr, ",") + "]"
+
+	idx.setloop(0)
+	idx.r.WriteString("\"leftpxf\":[")
+	idx.isR = true //设置为反向
+	rkw := pubgo.Reverse(kw)
+	Table["c"].Select.FindPrefixFun([]byte("c"+xbdb.IdxSplit+"r-"+rkw), true, idx.add)
+	jsonstrR := idx.r.String()
+	if idx.r != nil {
+		idx.r.Reset()
+		bufpool.Put(idx.r)
+	}
+	jsonstrR = strings.Trim(jsonstrR, ",") + "]"
+
+	jsons := "{" + jsonstr + "," + jsonstrR + "}"
+	w.Write([]byte(jsons))
+	//w.Write([]byte(strconv.Quote(ef.r.String()))) //必须使用strconv.Quote转义
+
+}
+
+type idxfunc struct {
+	kw    string
+	caid  string
+	count int //返回条数
+	loop  int
+	isR   bool //是否反向索引
+	r     *bytes.Buffer
+}
+
+func Newidxfunc(kw, caid string, count int) *idxfunc {
+	return &idxfunc{
+		kw:    kw,
+		caid:  caid,
+		count: count,
+		r:     bufpool.Get().(*bytes.Buffer),
+	}
+}
+func (i *idxfunc) add(k, v []byte) bool {
+	//rd := xbdb.KVToRd(k, v, []int{})
+	ks := xbdb.SplitRd(k) //bytes.Split(rd, []byte(xbdb.Split))
+
+	//过滤非目录下
+	artid, _ := IdToArtSec(string(ks[2])) //artid, _ := IdToArtSec(string(ks[1]))
+	cid := Artfid[uint32(artid)]
+	if !CacaRand(int(cid), i.caid) {
+		return true
+	}
+	var sectext string
+	if !i.isR {
+		sectext = string(ks[1])
+	} else {
+		sectext = pubgo.Reverse(string(ks[1])) //反转字符串
+	}
+
+	if len(i.kw) == len(sectext) {
+		return true
+	}
+	if strings.Contains(sectext, " ") { //if strings.Contains(string(ks[0]), " ") {
+		return true
+	}
+	//k1 := string(ks[1])
+	qsectext := strconv.Quote(sectext)
+	if !strings.Contains(qsectext, sectext) { //存在需要转义的，都过滤
+		return true
+	}
+	if !strings.Contains(i.r.String(), qsectext) {
+		//i.r.WriteString("{\"key\":" + qsectext + "},")
+		i.r.WriteString(qsectext + ",")
+	} else {
+		return true
+	}
+	i.loop++
+	return i.loop < i.count
+}
+
+/*
+	func (i *idxfunc) addr(k, v []byte) bool {
+		ks := xbdb.SplitRd(k)
+		//过滤非目录下
+		artid, _ := IdToArtSec(string(ks[2])) //artid, _ := IdToArtSec(string(ks[1]))
+		cid := Artfid[uint32(artid)]
+		if !CacaRand(int(cid), i.caid) {
+			return true
+		}
+
+		sectext := pubgo.Reverse(string(ks[1]))
+		if len(i.kw) == len(sectext) {
+			return true
+		}
+		if !strings.Contains(i.r.String(), sectext) {
+			qsectext := strconv.Quote(sectext)
+			i.r.WriteString(qsectext + ",")
+		} else {
+			return true
+		}
+		i.loop++
+		return i.loop < i.count
+	}
+*/
+func (i *idxfunc) setloop(v int) {
+	i.loop = v
+}

@@ -42,8 +42,5 @@ ReSearch，可以自定义到段落，句子等等。<br>
 ## 极简部署 
 打开对应系统的可执行文件即可运作。<br> 
 
-## 案例 
-[千佛网](http://www.soufoshuo.com)
-<br> 
 <br> 
 <br> 

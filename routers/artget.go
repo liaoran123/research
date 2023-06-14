@@ -45,7 +45,7 @@ func artget(w http.ResponseWriter, req *http.Request) {
 		tifo.FieldType = append(tifo.FieldType, "string")                       //添加一个text字段类型
 	}
 
-	r := Table[tbname].DataToJsonforIfoApp(tdb, tifo) //DataToJson(tdb, tifo)
+	r := Table[tbname].DataToJsonforIfo(tdb, tifo) //DataToJson(tdb, tifo)
 	if r != nil {
 		w.Write(r.Bytes())
 		//w.Write([]byte(strconv.Quote(r.String()))) //必须使用strconv.Quote转义

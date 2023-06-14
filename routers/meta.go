@@ -23,13 +23,13 @@ func Meta(w http.ResponseWriter, req *http.Request) {
 	bid := xbdb.SplitToCh([]byte(id))
 	key := Table[tbname].Select.GetPkKey(bid)
 	ef := newmetaexefun(tbname)
-	ef.r.Write([]byte("[")) //ef.r.Write([]byte("{\"result\":["))
+	ef.r.Write([]byte("{\"result\":[")) //ef.r.Write([]byte("[")) //
 	Table[tbname].Select.FindSeekFun(key, true, ef.addtext)
 	jsonstr := ef.r.String()
 	jsonstr = strings.Trim(jsonstr, ",")
 	ef.r.Reset()
 	ef.r.WriteString(jsonstr)
-	ef.r.Write([]byte("]"))
+	ef.r.Write([]byte("]}"))
 	if ef.r != nil {
 		w.Write(ef.r.Bytes())
 		//w.Write([]byte(strconv.Quote(ef.r.String()))) //必须使用strconv.Quote转义

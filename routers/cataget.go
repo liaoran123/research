@@ -58,7 +58,7 @@ func getChildCatas(id string, w http.ResponseWriter) {
 // 获取目录路径
 func getCataDir(id string, w http.ResponseWriter) {
 	idir, _ := strconv.Atoi(id)
-	r := CRAMs.GetCaDirToJsonApp(idir) // .GetCataDir(idir)
+	r := CRAMs.GetCaDirToJson(idir) // .GetCataDir(idir)
 	w.Write([]byte(r))
 	//w.Write([]byte(strconv.Quote(Se.r.String()))) //必须使用strconv.Quote转义
 	//json.NewEncoder(w).Encode(r)  strconv.Unquote

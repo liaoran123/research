@@ -265,54 +265,11 @@ var Bufpool = sync.Pool{
 	}
 */
 func (t *Table) DataToJsonApp(tbd *TbData) (r *bytes.Buffer) {
-	r = t.DataToJsonforIfoApp(tbd, t.Ifo)
+	r = t.DataToJsonforIfo(tbd, t.Ifo)
 	return
 }
 
-/*
-	func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) {
-		if tbd == nil {
-			return
-		}
-		r = Bufpool.Get().(*bytes.Buffer)
-		if r.Len() > 0 { //保证数据不混乱
-			r.Reset()
-		}
-		var rdmap map[string]string
-		jsonstr := ""
-		valstr := ""
-		r.WriteString("{\"result\":[")
-		for j, v := range tbd.Rd {
-			if v == nil {
-				continue
-			}
-			r.WriteString("{")
-			rdmap = t.FieldValuetoMap(v, Ifo)
-
-			for i, fv := range Ifo.FieldType {
-				switch fv {
-				case "string", "time", "bool":
-					valstr = strconv.Quote(rdmap[Ifo.Fields[i]])
-				default:
-					valstr = rdmap[Ifo.Fields[i]]
-				}
-				jsonstr = "\"" + Ifo.Fields[i] + "\":" + valstr
-				if i != len(rdmap)-1 {
-					jsonstr += ","
-				}
-				r.WriteString(jsonstr)
-			}
-			r.WriteString("}")
-			if j != len(tbd.Rd)-1 {
-				r.WriteString(",")
-			}
-		}
-		r.WriteString("]}")
-		tbd.Release()
-		return
-	}
-*/
-func (t *Table) DataToJsonforIfoApp(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) {
+func (t *Table) DataToJsonforIfo(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) {
 	if tbd == nil {
 		return
 	}
@@ -323,7 +280,7 @@ func (t *Table) DataToJsonforIfoApp(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffe
 	var rdmap map[string]string
 	jsonstr := ""
 	valstr := ""
-	r.WriteString("[")
+	r.WriteString("{\"result\":[")
 	for j, v := range tbd.Rd {
 		if v == nil {
 			continue
@@ -352,11 +309,54 @@ func (t *Table) DataToJsonforIfoApp(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffe
 			r.WriteString(",")
 		}
 	}
-	r.WriteString("]")
+	r.WriteString("]}")
 	tbd.Release()
 	return
 }
 
+/*
+func (t *Table) DataToJsonforIfoApp(tbd *TbData, Ifo *TableInfo) (r *bytes.Buffer) {
+	if tbd == nil {
+		return
+	}
+	r = Bufpool.Get().(*bytes.Buffer)
+	if r.Len() > 0 { //保证数据不混乱
+		r.Reset()
+	}
+	var rdmap map[string]string
+	jsonstr := ""
+	valstr := ""
+	r.WriteString("[")
+	for j, v := range tbd.Rd {
+		if v == nil {
+			continue
+		}
+		r.WriteString("{")
+		rdmap = t.FieldValuetoMap(v, Ifo)
+
+		for i, fv := range Ifo.FieldType {
+			switch fv {
+			case "string", "time", "bool":
+				valstr = strconv.Quote(rdmap[Ifo.Fields[i]])
+			default:
+				valstr = rdmap[Ifo.Fields[i]]
+			}
+			jsonstr = "\"" + Ifo.Fields[i] + "\":" + valstr
+			if i != len(rdmap)-1 {
+				jsonstr += ","
+			}
+			r.WriteString(jsonstr)
+		}
+		r.WriteString("}")
+		if j != len(tbd.Rd)-1 {
+			r.WriteString(",")
+		}
+	}
+	r.WriteString("]")
+	tbd.Release()
+	return
+}
+*/
 // 获取字段在表中的索引id
 func (t *Table) GetFieldIdx(field string) int {
 	for i, fv := range t.Ifo.Fields {

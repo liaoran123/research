@@ -78,7 +78,7 @@ func Search(w http.ResponseWriter, req *http.Request) {
 	bufpool.Put(Se.r)
 }
 
-//搜索执行类
+// 搜索执行类
 type SeExefunc struct {
 	tbname  string
 	kw      string
@@ -156,7 +156,7 @@ func (e *SeExefunc) search(k, v []byte) bool {
 	return e.loop < e.count
 }
 
-//组合查询
+// 组合查询
 func (e *SeExefunc) exsit() (find bool) {
 	if len(e.ks) < 2 {
 		find = true
@@ -193,7 +193,7 @@ func (e *SeExefunc) getartinfo() (r string) {
 	return
 }
 
-//文章摘录
+// 文章摘录
 func (e *SeExefunc) getartmeta() (r string) {
 	skid := ArtSecToId(e.artid, e.secid)                                 //c表id的字符串
 	key := Table[e.tbname].Select.GetPkKey(xbdb.SplitToCh([]byte(skid))) //Table[e.tbname].Ifo.FieldChByte("id", skid)

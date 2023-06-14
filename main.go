@@ -34,7 +34,7 @@ func addrouters() {
 	http.HandleFunc("/api/cata/", routers.Cata) //目录，get,post,put,delete
 	http.HandleFunc("/api/art/", routers.Art)   //文章，get,post,put,delete
 	//对应blazor的GetFromJsonAsync的json格式
-	http.HandleFunc("/api/searchapp/", routers.SearchApp) //http.HandleFunc("/api/search/", routers.Search) //搜索
+	http.HandleFunc("/api/search/", routers.Search) //http.HandleFunc("/api/search/", routers.Search) //搜索
 
 	http.HandleFunc("/api/art/item/", routers.Artitem) //获取目录下的文章列表
 	http.HandleFunc("/api/art/meta/", routers.Meta)    //获取文章摘录

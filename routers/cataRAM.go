@@ -99,7 +99,7 @@ func (c *CataRAMs) GetCataDir(cataid int) (r []CataInfo) {
 }
 */
 //获取目录路径
-/*
+
 func (c *CataRAMs) GetCaDirToJson(cataid int) (r string) {
 	var ok bool
 	var i uint32
@@ -126,7 +126,8 @@ func (c *CataRAMs) GetCaDirToJson(cataid int) (r string) {
 	r = strings.Trim(jsonstr, ",") + "]}"
 	return
 }
-*/
+
+/*
 func (c *CataRAMs) GetCaDirToJsonApp(cataid int) (r string) {
 	var ok bool
 	var i uint32
@@ -135,10 +136,7 @@ func (c *CataRAMs) GetCaDirToJsonApp(cataid int) (r string) {
 	jsonstr := "["
 	for cid > 0 {
 		if i, ok = CRAMs.CataRAMMap[uint32(cid)]; ok {
-			/*
-				[{"id":2,"title":"金刚经","fid":1,"isleaf":"0"},
-				{"id":3,"title":"六祖坛经","fid":1,"isleaf":"0"}]
-			*/
+
 			jsonstr += "{\"id\":" + strconv.Itoa(cid) + ","
 			jsonstr += "\"title\":" + strconv.Quote(CRAMs.cataRAM[i].title) + ","
 			jsonstr += "\"fid\":" + strconv.Itoa(CRAMs.cataRAM[i].fid) + ","
@@ -156,7 +154,7 @@ func (c *CataRAMs) GetCaDirToJsonApp(cataid int) (r string) {
 	r = strings.Trim(jsonstr, ",") + "]"
 	return
 }
-
+*/
 // 在某个或多个目录下查找
 // caids目录id集合
 func CacaRand(caid int, caids string) (r bool) {

@@ -117,7 +117,8 @@ func NewSeExefunc(tbname, kw, dir string, count int) *SeExefunc {
 	}
 }
 func (e *SeExefunc) search(k, v []byte) bool {
-	if time.Since(e.bt).Seconds() > 3 { //只要是控制组合查询超时时间
+	fmt.Println(e.loop)
+	if time.Since(e.bt).Seconds() > 3000000000000000000000000 { //只要是控制组合查询超时时间
 		e.loop = 21 //以便用户点击下一页，分散时间进行搜索，缓解性能问题。
 		//fmt.Println("组合查询超时3秒。") //多次执行由于会加载内存，则可以完成。
 		return false
@@ -140,7 +141,7 @@ func (e *SeExefunc) search(k, v []byte) bool {
 	e.secid = secid
 	e.pos = xbdb.BytesToInt(keys[2])
 
-	e.lastkey = string(keys[0]) + xbdb.Split + strconv.Itoa(e.artid) + idssplit + strconv.Itoa(e.secid) // + xbdb.Split + strconv.Itoa(e.pos)
+	e.lastkey = string(keys[0]) + xbdb.Split + strconv.Itoa(e.artid) + idssplit + strconv.Itoa(e.secid) + xbdb.Split + strconv.Itoa(e.pos)
 
 	e.cid = Artfid[uint32(e.artid)]   //获取文章对应的所属目录id
 	if !CacaRand(int(e.cid), e.dir) { //范围搜索
